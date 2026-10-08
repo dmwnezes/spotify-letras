@@ -35,6 +35,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("viz_real", true)
         set(v) = sp.edit().putBoolean("viz_real", v).apply()
 
+    /** Mostrar só o player (capa grande), sem a letra. */
+    var playerOnly: Boolean
+        get() = sp.getBoolean("player_only", false)
+        set(v) = sp.edit().putBoolean("player_only", v).apply()
+
     /** Ajuste fino da sincronia da letra, em milissegundos. */
     var lyricsOffsetMs: Long
         get() = sp.getLong("lyrics_offset", 0L)

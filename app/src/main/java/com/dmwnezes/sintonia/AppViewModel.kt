@@ -56,6 +56,7 @@ data class UiState(
     val lyrics: LyricsState = LyricsState.Idle,
     val colors: TrackColors = TrackColors.Default,
     val realAudioViz: Boolean = true,
+    val playerOnly: Boolean = false,
     val lyricsOffsetMs: Long = 0,
     val message: String? = null,
 )
@@ -76,6 +77,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             clientId = prefs.clientId,
             loggedIn = prefs.isLoggedIn,
             realAudioViz = prefs.realAudioViz,
+            playerOnly = prefs.playerOnly,
             lyricsOffsetMs = prefs.lyricsOffsetMs,
         )
     )
@@ -142,7 +144,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         stopPolling()
         prefs.clearTokens()
         currentTrackId = null
-        _ui.update { UiState(clientId = prefs.clientId, realAudioViz = prefs.realAudioViz, lyricsOffsetMs = prefs.lyricsOffsetMs) }
+        _ui.update { UiState(clientId = prefs.clientId, realAudioViz = prefs.realAudioViz, playerOnly = prefs.playerOnly, lyricsOffsetMs = prefs.lyricsOffsetMs) }
         _profile.value = ProfileState.Loading
     }
 
@@ -264,6 +266,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRealAudioViz(on: Boolean) {
         prefs.realAudioViz = on
         _ui.update { it.copy(realAudioViz = on) }
+    }
+
+    fun setPlayerOnly(on: Boolean) {
+        prefs.playerOnly = on
+        _ui.update { it.copy(playerOnly = on) }
     }
 
     fun nudgeOffset(deltaMs: Long) {

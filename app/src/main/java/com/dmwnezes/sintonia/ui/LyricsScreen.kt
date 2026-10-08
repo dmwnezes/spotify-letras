@@ -6,6 +6,7 @@ import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +36,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -66,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -103,6 +108,7 @@ fun LyricsScreen(
     onSetRealViz: (Boolean) -> Unit,
     onNudgeOffset: (Long) -> Unit,
     onRetryLyrics: () -> Unit,
+    onSetPlayerOnly: (Boolean) -> Unit,
     bottomPadding: PaddingValues,
 ) {
     val context = LocalContext.current
@@ -159,6 +165,8 @@ fun LyricsScreen(
                     var showTune by rememberSaveable { mutableStateOf(false) }
                     TrackHeader(
                         now = now,
+                        playerOnly = state.playerOnly,
+                        onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
                         realViz = useReal,
                         vizUnavailable = vizUnavailable && useReal,
                         onToggleViz = {
@@ -171,9 +179,12 @@ fun LyricsScreen(
                         onTune = { showTune = !showTune },
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        LyricsBody(state.lyrics, now, state.lyricsOffsetMs, onSeek, onRetryLyrics)
+                        Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
+                            if (onlyPlayer) BigCover(now)
+                            else LyricsBody(state.lyrics, now, state.lyricsOffsetMs, onSeek, onRetryLyrics)
+                        }
                     }
-                    AnimatedVisibility(showTune) {
+                    AnimatedVisibility(showTune && !state.playerOnly) {
                         OffsetTuner(state.lyricsOffsetMs, onNudgeOffset)
                     }
                     PlayerControls(now, onTogglePlay, onNext, onPrevious)
@@ -238,6 +249,8 @@ private fun NothingPlaying() {
 @Composable
 private fun TrackHeader(
     now: NowPlaying,
+    playerOnly: Boolean,
+    onTogglePlayerOnly: () -> Unit,
     realViz: Boolean,
     vizUnavailable: Boolean,
     onToggleViz: () -> Unit,
@@ -245,20 +258,31 @@ private fun TrackHeader(
 ) {
     val track = now.track ?: return
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = track.imageUrl,
-                contentDescription = "Capa",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(54.dp).clip(RoundedCornerShape(10.dp)),
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(track.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.artistLine, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!playerOnly) {
+                AsyncImage(
+                    model = track.imageUrl,
+                    contentDescription = "Capa",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(10.dp)),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(track.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(track.artistLine, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                IconButton(onClick = onTune) {
+                    Icon(Icons.Rounded.Tune, contentDescription = "Ajustar sincronia", tint = Color.White.copy(alpha = 0.8f))
+                }
+            } else {
+                Spacer(Modifier.weight(1f))
             }
-            IconButton(onClick = onTune) {
-                Icon(Icons.Rounded.Tune, contentDescription = "Ajustar sincronia", tint = Color.White.copy(alpha = 0.8f))
+            IconButton(onClick = onTogglePlayerOnly) {
+                Icon(
+                    if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
+                    contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
+                    tint = Color.White,
+                )
             }
             IconButton(onClick = onToggleViz) {
                 Icon(
@@ -275,6 +299,44 @@ private fun TrackHeader(
                 modifier = Modifier.padding(top = 6.dp, end = 12.dp),
             )
         }
+    }
+}
+
+/** Modo só player: capa grande que encolhe um pouco quando a música pausa. */
+@Composable
+private fun BigCover(now: NowPlaying) {
+    val track = now.track ?: return
+    val scale by animateFloatAsState(if (now.isPlaying) 1f else 0.86f, tween(500), label = "capa")
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        AsyncImage(
+            model = track.imageUrl,
+            contentDescription = "Capa do álbum ${track.album}",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .aspectRatio(1f)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .shadow(28.dp, RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(18.dp)),
+        )
+        Spacer(Modifier.height(28.dp))
+        Text(
+            track.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            track.artistLine, color = Color.White.copy(alpha = 0.72f), fontSize = 17.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            track.album, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
     }
 }
 

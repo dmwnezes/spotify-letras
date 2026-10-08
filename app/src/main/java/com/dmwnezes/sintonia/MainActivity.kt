@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
                         onSeek = vm::seek,
                         onSetRealViz = vm::setRealAudioViz,
                         onNudgeOffset = vm::nudgeOffset,
+                        onSetPlayerOnly = vm::setPlayerOnly,
                         onRetryLyrics = vm::retryLyrics,
                         bottomPadding = padding,
                     )
