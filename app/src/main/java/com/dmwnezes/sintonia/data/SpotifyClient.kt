@@ -134,6 +134,16 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
         call("PUT", "/me/player/play", body.toRequestBody("application/json".toMediaType()))
     }
 
+    /** Coloca uma faixa na fila do Spotify. */
+    suspend fun queue(id: String) { call("POST", "/me/player/queue?uri=spotify:track:$id") }
+
+    /** Busca músicas pelo nome, artista ou trecho. */
+    suspend fun search(query: String): List<Track> {
+        val q = java.net.URLEncoder.encode(query, "UTF-8")
+        val json = JSONObject(call("GET", "/search?type=track&limit=25&market=from_token&q=$q") ?: "{}")
+        return json.optJSONObject("tracks")?.optJSONArray("items").objects().map(::parseTrack)
+    }
+
     // ---------- Perfil ----------
 
     suspend fun me(): UserProfile {

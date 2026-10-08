@@ -58,8 +58,8 @@ fun LineActionsSheet(track: Track, line: PickedLine, onDismiss: () -> Unit, onNo
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
                 Text(line.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                line.translation?.let { Text(it, fontSize = 15.sp, color = Color.White.copy(alpha = 0.6f)) }
-                Text("${track.name} · ${track.artistLine}", fontSize = 13.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(top = 6.dp))
+                line.translation?.let { Text(it, fontSize = 15.sp, color = Palette.ink.copy(alpha = 0.6f)) }
+                Text("${track.name} · ${track.artistLine}", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.5f), modifier = Modifier.padding(top = 6.dp))
             }
             Spacer(Modifier.height(8.dp))
             ListItem(
@@ -118,7 +118,7 @@ fun NoteDialog(
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Text(
                     "Onde você estava, com quem, o que sentiu… Fica guardado no seu diário musical.",
-                    fontSize = 13.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 10.dp),
+                    fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 10.dp),
                 )
                 OutlinedTextField(
                     value = text,

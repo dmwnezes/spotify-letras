@@ -64,7 +64,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val Dim2 = Color.White.copy(alpha = 0.6f)
+private val Dim2: Color @Composable get() = Palette.ink.copy(alpha = 0.6f)
 
 /**
  * Escolha do trecho (pela letra ou por tempo, até 30 s) e geração do vídeo para compartilhar.
@@ -132,14 +132,14 @@ fun ShareVideoDialog(
         onDismissRequest = { job?.cancel(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Box(Modifier.fillMaxSize().background(Color(0xF20A0710))) {
+        Box(Modifier.fillMaxSize().background(Palette.surface.copy(alpha = 0.97f))) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Compartilhar trecho", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Compartilhar trecho", color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                         Text("${track.name} · ${track.artistLine}", color = Dim2, fontSize = 13.sp, maxLines = 1)
                     }
-                    IconButton(onClick = { job?.cancel(); onDismiss() }) { Icon(Icons.Rounded.Close, "Fechar", tint = Color.White) }
+                    IconButton(onClick = { job?.cancel(); onDismiss() }) { Icon(Icons.Rounded.Close, "Fechar", tint = Palette.ink) }
                 }
 
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,7 +162,7 @@ fun ShareVideoDialog(
                     val secs = range.durationMs / 1000
                     Text(
                         "Trecho: ${fmtT(range.startMs)} → ${fmtT(range.endMs)} (${secs} s)" + if (range.clipped) " · cortado em 30 s" else "",
-                        color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        color = Palette.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     )
                     if (byLyrics && synced) {
                         Text(if (picking) "Agora toque na última linha do trecho." else "Toque na primeira linha e depois na última.", color = Dim2, fontSize = 12.sp)
@@ -175,7 +175,7 @@ fun ShareVideoDialog(
                     Text(
                         "O vídeo vai sem o som da música: o Spotify não deixa outros apps gravarem o áudio. " +
                             "No Instagram, adicione a música pelo adesivo de música. O link da faixa vai junto na mensagem.",
-                        color = Color.White.copy(alpha = 0.45f), fontSize = 11.sp, lineHeight = 14.sp,
+                        color = Palette.ink.copy(alpha = 0.45f), fontSize = 11.sp, lineHeight = 14.sp,
                     )
                     error?.let { Text(it, color = Color(0xFFFFB4B4), fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
                     Spacer(Modifier.height(12.dp))
@@ -183,7 +183,7 @@ fun ShareVideoDialog(
                         LinearProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = Color.White, trackColor = Color.White.copy(alpha = 0.2f),
+                            color = Palette.ink, trackColor = Palette.ink.copy(alpha = 0.2f),
                             gapSize = 0.dp, drawStopIndicator = {},
                         )
                         Text("Gerando vídeo… ${(progress * 100).toInt()}%", color = Dim2, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
@@ -191,7 +191,7 @@ fun ShareVideoDialog(
                         Button(
                             onClick = ::generate,
                             modifier = Modifier.fillMaxWidth().height(52.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                            colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
                         ) { Text("Gerar e compartilhar", fontWeight = FontWeight.Bold) }
                     }
                 }
@@ -205,9 +205,9 @@ private fun Chip(label: String, selected: Boolean, enabled: Boolean = true, onCl
     FilterChip(
         selected = selected, onClick = onClick, enabled = enabled, label = { Text(label) },
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = Color.White.copy(alpha = 0.08f), labelColor = Color.White.copy(alpha = 0.85f),
-            selectedContainerColor = Color.White, selectedLabelColor = Color.Black,
-            disabledContainerColor = Color.White.copy(alpha = 0.03f), disabledLabelColor = Color.White.copy(alpha = 0.3f),
+            containerColor = Palette.ink.copy(alpha = 0.08f), labelColor = Palette.ink.copy(alpha = 0.85f),
+            selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
+            disabledContainerColor = Palette.ink.copy(alpha = 0.03f), disabledLabelColor = Palette.ink.copy(alpha = 0.3f),
         ),
         border = null,
     )
@@ -223,7 +223,7 @@ private fun LinePicker(lines: List<LyricLine>, from: Int, to: Int, scrollTo: Int
             val inRange = i in a..b
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(12.dp))
-                    .background(if (inRange) Color.White.copy(alpha = 0.16f) else Color.Transparent)
+                    .background(if (inRange) Palette.ink.copy(alpha = 0.16f) else Color.Transparent)
                     .clickable { onTap(i) }
                     .padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -231,12 +231,12 @@ private fun LinePicker(lines: List<LyricLine>, from: Int, to: Int, scrollTo: Int
                 Text(fmtT(line.timeMs), color = Dim2, fontSize = 12.sp, modifier = Modifier.padding(end = 12.dp))
                 Text(
                     line.text.ifBlank { "•  •  •" },
-                    color = if (inRange) Color.White else Color.White.copy(alpha = 0.65f),
+                    color = if (inRange) Palette.ink else Palette.ink.copy(alpha = 0.65f),
                     fontSize = 17.sp,
                     fontWeight = if (inRange) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier.weight(1f),
                 )
-                if (picking && i == a) Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(Color.White))
+                if (picking && i == a) Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(Palette.ink))
             }
         }
     }
@@ -248,14 +248,14 @@ private fun TimePicker(
     onStart: (Long) -> Unit, onLength: (Long) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Text("Começo do trecho: ${fmtT(start)}", color = Color.White, fontSize = 15.sp)
+        Text("Começo do trecho: ${fmtT(start)}", color = Palette.ink, fontSize = 15.sp)
         Slider(
             value = start.toFloat(),
             onValueChange = { onStart(it.toLong()) },
             valueRange = 0f..(durationMs - length).coerceAtLeast(1).toFloat(),
-            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.2f)),
+            colors = SliderDefaults.colors(thumbColor = Palette.ink, activeTrackColor = Palette.ink, inactiveTrackColor = Palette.ink.copy(alpha = 0.2f)),
         )
-        Text("Duração", color = Color.White, fontSize = 15.sp)
+        Text("Duração", color = Palette.ink, fontSize = 15.sp)
         Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(10_000L, 15_000L, 20_000L, 30_000L).forEach { l -> Chip("${l / 1000} s", length == l) { onLength(l) } }
         }
@@ -263,7 +263,7 @@ private fun TimePicker(
         if (inWindow.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("Letra que aparece no vídeo:", color = Dim2, fontSize = 12.sp)
-            inWindow.take(8).forEach { Text(it.text, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
+            inWindow.take(8).forEach { Text(it.text, color = Palette.ink.copy(alpha = 0.85f), fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
         }
     }
 }

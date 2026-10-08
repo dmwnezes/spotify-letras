@@ -2,4 +2,8 @@
 <resources>
     <string name="app_name">Sintonia</string>
     <string name="widget_desc">A linha da letra que está tocando no Spotify</string>
+    <string name="sc_letra">Letra</string>
+    <string name="sc_buscar">Buscar música</string>
+    <string name="sc_caderno">Caderno</string>
+    <string name="sc_quiz">Quiz da letra</string>
 </resources>

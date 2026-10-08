@@ -46,3 +46,25 @@ class LrcParserTest {
         assertEquals("Garota", LrcLibClient.cleanTitle("Garota"))
     }
 }
+
+class WordTimingTest {
+    @org.junit.Test
+    fun parsesEnhancedLrc() {
+        val l = com.dmwnezes.sintonia.lyrics.LrcParser.parse("[00:10.00] <00:10.00>Olá <00:10.50>meu <00:11.20>mundo")
+        org.junit.Assert.assertEquals("Olá meu mundo", l[0].text)
+        org.junit.Assert.assertEquals(listOf(10_000L, 10_500L, 11_200L), l[0].words!!.map { it.startMs })
+    }
+
+    @org.junit.Test
+    fun estimatesWords() {
+        val line = com.dmwnezes.sintonia.lyrics.LyricLine(1000, "eu vou cantar devagar")
+        val sp = com.dmwnezes.sintonia.lyrics.WordTiming.spans(line, 5000)
+        org.junit.Assert.assertEquals(4, sp.size)
+        org.junit.Assert.assertEquals(1000L, sp.first().startMs)
+        org.junit.Assert.assertTrue(sp.last().endMs <= 1000 + (4000 * 0.85).toLong() + 4)
+        org.junit.Assert.assertTrue((sp[2].endMs - sp[2].startMs) > (sp[0].endMs - sp[0].startMs)) // palavra maior, mais tempo
+        val p = com.dmwnezes.sintonia.lyrics.WordTiming.progress(sp, sp[1].startMs + 1)
+        org.junit.Assert.assertEquals(1f, p[0], 0f)
+        org.junit.Assert.assertEquals(0f, p[3], 0f)
+    }
+}

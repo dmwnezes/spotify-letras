@@ -50,6 +50,23 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("live_lyrics", false)
         set(v) = sp.edit().putBoolean("live_lyrics", v).apply()
 
+    /** Acender a linha atual palavra por palavra (karaokê). */
+    var karaoke: Boolean
+        get() = sp.getBoolean("karaoke", true)
+        set(v) = sp.edit().putBoolean("karaoke", v).apply()
+
+    var themeMode: String
+        get() = sp.getString("theme_mode", "AUTO") ?: "AUTO"
+        set(v) = sp.edit().putString("theme_mode", v).apply()
+
+    var lyricsFont: String
+        get() = sp.getString("lyrics_font", "PADRAO") ?: "PADRAO"
+        set(v) = sp.edit().putString("lyrics_font", v).apply()
+
+    var lyricsScale: Float
+        get() = sp.getFloat("lyrics_scale", 1f)
+        set(v) = sp.edit().putFloat("lyrics_scale", v).apply()
+
     var vizTheme: String
         get() = sp.getString("viz_theme", "BRILHOS") ?: "BRILHOS"
         set(v) = sp.edit().putString("viz_theme", v).apply()

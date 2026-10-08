@@ -69,7 +69,7 @@ fun ProfileScreen(
     LaunchedEffect(Unit) { onRange(range) }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).statusBarsPadding(),
+        Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = 0.35f)).statusBarsPadding(),
         contentPadding = PaddingValues(
             top = 12.dp,
             bottom = bottomPadding.calculateBottomPadding() + 24.dp,
@@ -83,12 +83,12 @@ fun ProfileScreen(
                     Spacer(Modifier.width(12.dp))
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Perfil Musical", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                    user?.name?.let { Text(it, color = Color.White.copy(alpha = 0.65f), fontSize = 14.sp) }
+                    Text("Perfil Musical", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    user?.name?.let { Text(it, color = Palette.ink.copy(alpha = 0.65f), fontSize = 14.sp) }
                 }
-                IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Atualizar", tint = Color.White) }
-                IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Ajustes", tint = Color.White) }
-                IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Rounded.Logout, "Sair", tint = Color.White.copy(alpha = 0.7f)) }
+                IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Atualizar", tint = Palette.ink) }
+                IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Ajustes", tint = Palette.ink) }
+                IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Rounded.Logout, "Sair", tint = Palette.ink.copy(alpha = 0.7f)) }
             }
         }
         item {
@@ -99,10 +99,10 @@ fun ProfileScreen(
                         onClick = { onRange(r) },
                         label = { Text(r.label) },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Color.White.copy(alpha = 0.08f),
-                            labelColor = Color.White.copy(alpha = 0.8f),
-                            selectedContainerColor = Color.White,
-                            selectedLabelColor = Color.Black,
+                            containerColor = Palette.ink.copy(alpha = 0.08f),
+                            labelColor = Palette.ink.copy(alpha = 0.8f),
+                            selectedContainerColor = Palette.ink,
+                            selectedLabelColor = Palette.onInk,
                         ),
                         border = null,
                     )
@@ -113,13 +113,13 @@ fun ProfileScreen(
         when (state) {
             ProfileState.Loading -> item {
                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color.White)
+                    CircularProgressIndicator(color = Palette.ink)
                 }
             }
             is ProfileState.Failed -> item {
                 Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.message, color = Color.White.copy(alpha = 0.75f))
-                    TextButton(onClick = onRefresh) { Text("Tentar de novo", color = Color.White) }
+                    Text(state.message, color = Palette.ink.copy(alpha = 0.75f))
+                    TextButton(onClick = onRefresh) { Text("Tentar de novo", color = Palette.ink) }
                 }
             }
             is ProfileState.Ready -> {
@@ -132,9 +132,9 @@ fun ProfileScreen(
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             itemsIndexed(d.topArtists) { i, a ->
                                 Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(a.imageUrl, a.name, Modifier.size(96.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
+                                    AsyncImage(a.imageUrl, a.name, Modifier.size(96.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
                                     Spacer(Modifier.height(6.dp))
-                                    Text("${i + 1}. ${a.name}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text("${i + 1}. ${a.name}", color = Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -165,7 +165,7 @@ private fun QuizCard(accent: Color, onClick: () -> Unit) {
             .padding(start = 20.dp, end = 20.dp, top = 14.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(Palette.ink.copy(alpha = 0.08f))
             .clickable(onClick = onClick)
             .padding(18.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -175,17 +175,17 @@ private fun QuizCard(accent: Color, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("Quiz: adivinhe a música", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Trechos das letras das músicas que você mais ouve", color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp)
+            Text("Quiz: adivinhe a música", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Trechos das letras das músicas que você mais ouve", color = Palette.ink.copy(alpha = 0.65f), fontSize = 13.sp)
         }
-        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.6f))
+        Icon(Icons.Rounded.ChevronRight, null, tint = Palette.ink.copy(alpha = 0.6f))
     }
 }
 
 @Composable
 private fun SectionTitle(text: String) {
     Text(
-        text, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+        text, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 10.dp),
     )
 }
@@ -210,13 +210,13 @@ private fun Highlights(d: ProfileData, range: TimeRange, accent: Color) {
             .padding(18.dp)
     ) {
         if (topArtist != null) {
-            Text("Seu artista nº 1 $period", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-            Text(topArtist, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Seu artista nº 1 $period", color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp)
+            Text(topArtist, color = Palette.ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
         }
         if (topTrack != null) {
             Spacer(Modifier.height(10.dp))
-            Text("Música mais ouvida", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-            Text("${topTrack.name} · ${topTrack.artists.firstOrNull().orEmpty()}", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text("Música mais ouvida", color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp)
+            Text("${topTrack.name} · ${topTrack.artists.firstOrNull().orEmpty()}", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -229,8 +229,8 @@ private fun Highlights(d: ProfileData, range: TimeRange, accent: Color) {
 @Composable
 private fun Stat(value: String, label: String) {
     Column {
-        Text(value, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-        Text(label, color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 15.sp)
+        Text(value, color = Palette.ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text(label, color = Palette.ink.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 15.sp)
     }
 }
 
@@ -240,10 +240,10 @@ private fun GenreBars(genres: List<Pair<String, Float>>, accent: Color) {
         genres.forEach { (name, share) ->
             Column {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(name.replaceFirstChar { it.uppercase() }, color = Color.White, fontSize = 14.sp)
-                    Text("${(share * 100).toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text(name.replaceFirstChar { it.uppercase() }, color = Palette.ink, fontSize = 14.sp)
+                    Text("${(share * 100).toInt()}%", color = Palette.ink.copy(alpha = 0.6f), fontSize = 13.sp)
                 }
-                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f))) {
+                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.12f))) {
                     Box(Modifier.fillMaxWidth(share.coerceIn(0.02f, 1f)).height(6.dp).clip(CircleShape).background(accent))
                 }
             }
@@ -255,17 +255,17 @@ private fun GenreBars(genres: List<Pair<String, Float>>, accent: Color) {
 private fun TrackRow(t: Track, leading: String? = null, trailing: String? = null) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         if (leading != null) {
-            Text(leading, color = Color.White.copy(alpha = 0.55f), fontSize = 14.sp, modifier = Modifier.width(28.dp))
+            Text(leading, color = Palette.ink.copy(alpha = 0.55f), fontSize = 14.sp, modifier = Modifier.width(28.dp))
         }
-        AsyncImage(t.imageUrl, null, Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
+        AsyncImage(t.imageUrl, null, Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(t.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(t.artistLine, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(t.name, color = Palette.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(t.artistLine, color = Palette.ink.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (trailing != null) {
             Spacer(Modifier.width(8.dp))
-            Text(trailing, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(trailing, color = Palette.ink.copy(alpha = 0.5f), fontSize = 12.sp)
         }
     }
 }

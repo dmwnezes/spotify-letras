@@ -254,6 +254,14 @@ class Playback(
 
     fun playTrack(id: String) = control { spotify.playTrack(id) }
 
+    fun queue(id: String, name: String) {
+        scope.launch {
+            runCatching { spotify.queue(id) }
+                .onSuccess { _messages.tryEmit("\"$name\" vai tocar em seguida.") }
+                .onFailure { _messages.tryEmit(it.message ?: "Não deu para colocar na fila.") }
+        }
+    }
+
     private fun control(block: suspend () -> Unit) {
         scope.launch {
             try {

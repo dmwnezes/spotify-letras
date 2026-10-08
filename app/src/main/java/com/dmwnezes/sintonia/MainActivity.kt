@@ -25,6 +25,16 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.activity.SystemBarStyle
+import com.dmwnezes.sintonia.ui.DarkPalette
+import com.dmwnezes.sintonia.ui.LightPalette
+import com.dmwnezes.sintonia.ui.LocalAppPalette
+import com.dmwnezes.sintonia.ui.LocalLyricsStyle
+import com.dmwnezes.sintonia.ui.Palette
+import com.dmwnezes.sintonia.ui.ThemeMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +60,7 @@ import com.dmwnezes.sintonia.ui.NotebookScreen
 import com.dmwnezes.sintonia.ui.ProfileScreen
 import com.dmwnezes.sintonia.ui.QuizDialog
 import com.dmwnezes.sintonia.ui.SettingsDialog
+import com.dmwnezes.sintonia.ui.SearchDialog
 import com.dmwnezes.sintonia.ui.SplashCredits
 import com.dmwnezes.sintonia.update.Release
 import com.dmwnezes.sintonia.update.UpdateDialog
@@ -63,10 +74,14 @@ class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
     private val historyVm: HistoryViewModel by viewModels()
 
+    /** Pedido vindo de um atalho do ícone: "letra", "buscar", "caderno" ou "quiz". */
+    private val pendingOpen = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         intent?.data?.let(vm::handleCallback)
+        pendingOpen.value = intent?.getStringExtra("abrir")
 
         // Só consulta o Spotify enquanto o app está aberto na tela (ou o serviço da tela de bloqueio está ligado).
         lifecycleScope.launch {
@@ -81,8 +96,24 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(primary = Color.White, background = Color.Black)) {
-                val state by vm.ui.collectAsStateWithLifecycle()
+            val state by vm.ui.collectAsStateWithLifecycle()
+            val dark = when (state.themeMode) {
+                ThemeMode.AUTO -> isSystemInDarkTheme()
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+            }
+            // Ícones da barra de status escuros no tema claro e claros no escuro.
+            LaunchedEffect(dark) {
+                val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            val scheme = if (dark) darkColorScheme(primary = Color.White, background = Color.Black)
+            else lightColorScheme(primary = Color(0xFF14101C), background = Color.White)
+            CompositionLocalProvider(
+                LocalAppPalette provides if (dark) DarkPalette else LightPalette,
+                LocalLyricsStyle provides state.lyricsStyle,
+            ) { MaterialTheme(colorScheme = scheme) {
                 var splash by rememberSaveable { mutableStateOf(true) }
                 AppBackground(state.colors) {
                     if (splash) {
@@ -99,13 +130,14 @@ class MainActivity : ComponentActivity() {
                         MainTabs()
                     }
                 }
-            }
+            } }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.data?.let(vm::handleCallback)
+        intent.getStringExtra("abrir")?.let { pendingOpen.value = it }
     }
 
     private fun openLogin() {
@@ -123,6 +155,17 @@ class MainActivity : ComponentActivity() {
         var showQuiz by remember { mutableStateOf(false) }
         var wrappedKey by remember { mutableStateOf<String?>(null) }
         var showUpdate by remember { mutableStateOf(false) }
+        var showSearch by remember { mutableStateOf(false) }
+        val open by pendingOpen.collectAsStateWithLifecycle()
+        LaunchedEffect(open) {
+            when (open) {
+                "letra" -> tab = 0
+                "buscar" -> { tab = 0; showSearch = true }
+                "caderno" -> tab = 3
+                "quiz" -> { tab = 1; showQuiz = true }
+            }
+            pendingOpen.value = null
+        }
         var foundUpdate by remember { mutableStateOf<Release?>(null) }
 
         // Checa atualização uma vez ao abrir; só avisa se a pessoa não dispensou esta versão.
@@ -151,13 +194,13 @@ class MainActivity : ComponentActivity() {
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar(containerColor = Color.Black.copy(alpha = 0.45f), tonalElevation = 0.dp) {
+                NavigationBar(containerColor = Palette.scrim.copy(alpha = if (Palette.dark) 0.45f else 0.6f), tonalElevation = 0.dp) {
                     val itemColors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = Color.White,
-                        indicatorColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                        selectedIconColor = Palette.onInk,
+                        selectedTextColor = Palette.ink,
+                        indicatorColor = Palette.ink,
+                        unselectedIconColor = Palette.ink.copy(alpha = 0.6f),
+                        unselectedTextColor = Palette.ink.copy(alpha = 0.6f),
                     )
                     listOf(
                         Triple("Letras", Icons.Rounded.Lyrics, 0),
@@ -186,6 +229,8 @@ class MainActivity : ComponentActivity() {
                         onNudgeOffset = vm::nudgeOffset,
                         onSetPlayerOnly = vm::setPlayerOnly,
                         onSetShowTranslation = vm::setShowTranslation,
+                        onSetKaraoke = vm::setKaraoke,
+                        onOpenSearch = { showSearch = true },
                         onRetryLyrics = vm::retryLyrics,
                         bottomPadding = padding,
                     )
@@ -231,10 +276,17 @@ class MainActivity : ComponentActivity() {
                 onTranslation = vm::setShowTranslation,
                 onTheme = vm::setVizTheme,
                 onCheckUpdates = { showSettings = false; showUpdate = true },
+                onThemeMode = vm::setThemeMode,
+                onLyricsStyle = vm::setLyricsStyle,
                 onDismiss = { showSettings = false },
             )
         }
         if (showUpdate) UpdateDialog(onDismiss = { showUpdate = false })
+        if (showSearch) SearchDialog(
+            onPlay = { vm.playTrack(it.id) },
+            onQueue = { vm.queue(it.id, it.name) },
+            onDismiss = { showSearch = false },
+        )
         foundUpdate?.let { r ->
             UpdateDialog(initial = r, onSkip = { AppGraph.prefs.skippedUpdate = it.tag }, onDismiss = { foundUpdate = null })
         }

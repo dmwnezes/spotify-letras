@@ -35,12 +35,14 @@ import kotlin.random.Random
 /** Fundo com as cores da capa, em transição suave quando a música muda. */
 @Composable
 fun AppBackground(colors: TrackColors, modifier: Modifier = Modifier, content: @Composable () -> Unit = {}) {
-    val deep by animateColorAsState(colors.deep, tween(1200), label = "deep")
-    val base by animateColorAsState(colors.base, tween(1200), label = "base")
+    val dark = Palette.dark
+    val a by animateColorAsState(if (dark) colors.base else colors.soft2, tween(1200), label = "a")
+    val b by animateColorAsState(if (dark) colors.deep else colors.soft1, tween(1200), label = "b")
+    val end = if (dark) Color(0xFF050308) else Color(0xFFFBF8FD)
     Box(
         modifier
             .fillMaxSize()
-            .background(Brush.linearGradient(listOf(base, deep, Color(0xFF050308))))
+            .background(Brush.linearGradient(listOf(a, b, end)))
     ) { content() }
 }
 

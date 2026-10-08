@@ -92,4 +92,14 @@ class NewFeaturesTest {
         val q = Quote("And I said hey, what's going on, a line long enough to wrap a couple of times", "E eu disse ei, o que está acontecendo", "Canção de Teste", "Artista Exemplo", null)
         File(out, "trecho.png").outputStream().use { QuoteImage.render(q, cover).compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
+
+    @Test
+    fun nowPlayingCard() {
+        val cover = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888).also {
+            Canvas(it).drawRect(0f, 0f, 300f, 300f, Paint().apply { shader = LinearGradient(0f, 0f, 300f, 300f, Color.rgb(230, 80, 60), Color.rgb(60, 40, 150), Shader.TileMode.CLAMP) })
+        }
+        val t = com.dmwnezes.sintonia.data.Track("x", "Canção de Teste", listOf("Artista Exemplo"), "Álbum", null, 215_000)
+        val info = com.dmwnezes.sintonia.share.NowPlayingInfo(t, 83_000, "For this moment to come, I've been waiting", "Para este momento chegar")
+        File(out, "cartao.png").outputStream().use { com.dmwnezes.sintonia.share.NowPlayingCard.render(info, cover).compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
 }

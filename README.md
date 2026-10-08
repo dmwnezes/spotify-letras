@@ -3,10 +3,14 @@
 App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
 
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
+- **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
+- **Busca:** procure qualquer música e toque na hora ou coloque na fila.
+- **Aparência:** tema claro, escuro ou automático (cores tiradas da capa) e fonte/tamanho da letra.
+- **Atalhos:** segure o ícone do app para abrir Letra, Buscar, Caderno ou Quiz.
 - **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha (feita no celular, grátis).
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
-- **Compartilhar:** gera um vídeo (Stories 9:16 ou quadrado) com capa e letra de um trecho de até 30 s.
+- **Compartilhar:** cartão "tocando agora" para Stories, ou um vídeo (Stories 9:16 ou quadrado) com capa e letra de um trecho de até 30 s.
 - **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
 - **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas, uma retrospectiva em texto e outra animada estilo Stories. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
 - **Quiz:** adivinhe a música por um trecho da letra, usando as músicas que você mais ouve.

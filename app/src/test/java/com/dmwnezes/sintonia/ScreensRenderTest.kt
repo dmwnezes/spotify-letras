@@ -70,7 +70,12 @@ class ScreensRenderTest {
     }
 
     @Test
-    fun lyricsWithTranslation() {
+    fun lyricsLightSerif() = lyrics(light = true, name = "letras-claro-serifa")
+
+    @Test
+    fun lyricsWithTranslation() = lyrics(light = false, name = "letras-traducao")
+
+    private fun lyrics(light: Boolean, name: String) {
         rule.mainClock.autoAdvance = false
         val lines = listOf(
             LyricLine(0, "I've been waiting for a long time"),
@@ -83,19 +88,25 @@ class ScreensRenderTest {
         val track = Track("x", "Song Name", listOf("Some Artist"), "Album", null, 200_000)
         val state = UiState(
             loggedIn = true, firstLoadDone = true,
-            now = NowPlaying(track, true, 6000, SystemClock.elapsedRealtime()),
+            now = NowPlaying(track, true, 6200, SystemClock.elapsedRealtime()),
             lyrics = LyricsState.Ready(Lyrics.Synced(lines)),
             translation = TranslationState.Ready("inglês", tr),
-            colors = colors, realAudioViz = false, showTranslation = true,
+            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true,
         )
         rule.setContent {
-            MaterialTheme(colorScheme = darkColorScheme(primary = Color.White)) {
-                AppBackground(colors) {
-                    LyricsScreen(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, PaddingValues())
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.dmwnezes.sintonia.ui.LocalAppPalette provides if (light) com.dmwnezes.sintonia.ui.LightPalette else com.dmwnezes.sintonia.ui.DarkPalette,
+                com.dmwnezes.sintonia.ui.LocalLyricsStyle provides com.dmwnezes.sintonia.ui.LyricsStyle(
+                    if (light) com.dmwnezes.sintonia.ui.LyricsFont.SERIFA else com.dmwnezes.sintonia.ui.LyricsFont.PADRAO),
+            ) {
+                MaterialTheme(colorScheme = darkColorScheme(primary = Color.White)) {
+                    AppBackground(state.colors) {
+                        LyricsScreen(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, PaddingValues())
+                    }
                 }
             }
         }
-        save("letras-traducao")
+        save(name)
     }
 
     @Test

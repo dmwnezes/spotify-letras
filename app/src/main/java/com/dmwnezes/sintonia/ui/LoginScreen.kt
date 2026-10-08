@@ -67,18 +67,18 @@ fun LoginScreen(
             .padding(28.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Sintonia", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Sintonia", color = Palette.ink, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
         Text(
             "A letra acompanhando a música, com um visualizer que dança junto.",
-            color = Color.White.copy(alpha = 0.75f), fontSize = 17.sp,
+            color = Palette.ink.copy(alpha = 0.75f), fontSize = 17.sp,
         )
         Spacer(Modifier.height(36.dp))
 
         if (editing) {
-            Text("1. Cole o Client ID do seu app do Spotify", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("1. Cole o Client ID do seu app do Spotify", color = Palette.ink, fontWeight = FontWeight.Bold)
             Text(
                 "Fica em developer.spotify.com → Dashboard → seu app → Settings.",
-                color = Color.White.copy(alpha = 0.65f), fontSize = 14.sp,
+                color = Palette.ink.copy(alpha = 0.65f), fontSize = 14.sp,
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
@@ -89,21 +89,21 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color.White, unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
-                    cursorColor = Color.White,
+                    focusedTextColor = Palette.ink, unfocusedTextColor = Palette.ink,
+                    focusedBorderColor = Palette.ink, unfocusedBorderColor = Palette.ink.copy(alpha = 0.4f),
+                    cursorColor = Palette.ink,
                 ),
             )
             Spacer(Modifier.height(18.dp))
-            Text("2. No mesmo painel, em Redirect URIs, adicione:", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("2. No mesmo painel, em Redirect URIs, adicione:", color = Palette.ink, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.1f)).padding(start = 14.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Palette.ink.copy(alpha = 0.1f)).padding(start = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(SpotifyAuth.REDIRECT_URI, color = Color.White, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+                Text(SpotifyAuth.REDIRECT_URI, color = Palette.ink, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
                 IconButton(onClick = { clipboard.setText(AnnotatedString(SpotifyAuth.REDIRECT_URI)) }) {
-                    Icon(Icons.Rounded.ContentCopy, "Copiar", tint = Color.White)
+                    Icon(Icons.Rounded.ContentCopy, "Copiar", tint = Palette.ink)
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -111,7 +111,7 @@ fun LoginScreen(
                 onClick = { onSaveClientId(input); editing = false },
                 enabled = input.length >= 20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
             ) { Text("Salvar", fontWeight = FontWeight.Bold) }
         } else {
             Button(
@@ -124,7 +124,7 @@ fun LoginScreen(
                 else Text("Entrar com Spotify", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             TextButton(onClick = { editing = true }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Trocar Client ID", color = Color.White.copy(alpha = 0.7f))
+                Text("Trocar Client ID", color = Palette.ink.copy(alpha = 0.7f))
             }
         }
 

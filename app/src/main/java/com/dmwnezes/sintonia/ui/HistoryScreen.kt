@@ -69,8 +69,8 @@ import com.dmwnezes.sintonia.history.fmtInt
 import com.dmwnezes.sintonia.history.monthLabel
 import kotlin.math.roundToInt
 
-private val Dim = Color.White.copy(alpha = 0.62f)
-private val Card = Color.White.copy(alpha = 0.07f)
+private val Dim: Color @Composable get() = Palette.ink.copy(alpha = 0.62f)
+private val Card: Color @Composable get() = Palette.ink.copy(alpha = 0.07f)
 
 @Composable
 fun HistoryScreen(
@@ -94,13 +94,13 @@ fun HistoryScreen(
     val openPicker = { picker.launch(arrayOf("application/zip", "application/json", "application/octet-stream", "text/plain", "*/*")) }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.40f)).statusBarsPadding(),
+        Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = 0.40f)).statusBarsPadding(),
         contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding.calculateBottomPadding() + 32.dp),
     ) {
         item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Histórico", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Histórico", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                     ui.stats?.all?.let { Text("${it.firstDay} a ${it.lastDay}", color = Dim, fontSize = 13.sp) }
                 }
             }
@@ -109,15 +109,15 @@ fun HistoryScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedButton(onClick = openPicker, enabled = !ui.importing, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.FileOpen, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.FileOpen, null, tint = Palette.ink, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Ler arquivo", color = Color.White)
+                    Text("Ler arquivo", color = Palette.ink)
                 }
                 Button(
                     onClick = { showExport = true },
                     enabled = ui.stats != null && !ui.importing,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
                 ) {
                     Icon(Icons.Rounded.IosShare, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -178,7 +178,7 @@ private fun ExportOption(icon: androidx.compose.ui.graphics.vector.ImageVector, 
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(title, fontWeight = FontWeight.SemiBold)
-                Text(desc, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                Text(desc, fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f))
             }
         }
     }
@@ -186,15 +186,15 @@ private fun ExportOption(icon: androidx.compose.ui.graphics.vector.ImageVector, 
 
 @Composable
 private fun Loading() {
-    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color.White) }
+    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.ink) }
 }
 
 @Composable
 private fun Importing(count: Int) {
     Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        CircularProgressIndicator(color = Color.White)
+        CircularProgressIndicator(color = Palette.ink)
         Spacer(Modifier.height(16.dp))
-        Text("Lendo seu histórico…", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text("Lendo seu histórico…", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         if (count > 0) Text("${fmtInt(count)} reproduções até agora", color = Dim, fontSize = 14.sp)
     }
 }
@@ -203,7 +203,7 @@ private fun Importing(count: Int) {
 private fun EmptyHistory(onPick: () -> Unit) {
     Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         Panel {
-            Text("Seu histórico completo, ano a ano", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Seu histórico completo, ano a ano", color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Step("1", "Em spotify.com → Conta → Privacidade, peça o \"Histórico de streaming estendido\".")
             Step("2", "Quando o e-mail do Spotify chegar, baixe o arquivo .zip no celular.")
@@ -217,7 +217,7 @@ private fun EmptyHistory(onPick: () -> Unit) {
             Button(
                 onClick = onPick,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
             ) { Text("Ler arquivo do Spotify", fontWeight = FontWeight.Bold) }
         }
     }
@@ -226,11 +226,11 @@ private fun EmptyHistory(onPick: () -> Unit) {
 @Composable
 private fun Step(n: String, text: String) {
     Row(Modifier.padding(vertical = 5.dp)) {
-        Box(Modifier.size(24.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-            Text(n, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Box(Modifier.size(24.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Text(n, color = Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.width(10.dp))
-        Text(text, color = Color.White.copy(alpha = 0.88f), fontSize = 15.sp)
+        Text(text, color = Palette.ink.copy(alpha = 0.88f), fontSize = 15.sp)
     }
 }
 
@@ -255,8 +255,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
                     onClick = { onSelect(key) },
                     label = { Text(if (key == "all") "Tudo" else key) },
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Card, labelColor = Color.White.copy(alpha = 0.8f),
-                        selectedContainerColor = Color.White, selectedLabelColor = Color.Black,
+                        containerColor = Card, labelColor = Palette.ink.copy(alpha = 0.8f),
+                        selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
                     ),
                     border = null,
                 )
@@ -269,7 +269,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
     item {
         Section("Retrospectiva")
         Panel(Modifier.padding(horizontal = 20.dp)) {
-            Text(Retrospective.forPeriod(stats, p.key), color = Color.White.copy(alpha = 0.92f), fontSize = 15.sp, lineHeight = 22.sp)
+            Text(Retrospective.forPeriod(stats, p.key), color = Palette.ink.copy(alpha = 0.92f), fontSize = 15.sp, lineHeight = 22.sp)
             Spacer(Modifier.height(14.dp))
             Button(
                 onClick = { onWrapped(p.key) },
@@ -342,7 +342,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
                 Spacer(Modifier.height(8.dp))
                 stats.artistTimeline.take(20).forEach { TimelineRow(it.sub, it.name, accent) }
             } else {
-                Text("${fmtInt(p.newArtists)} artistas novos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                Text("${fmtInt(p.newArtists)} artistas novos", color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.height(8.dp))
                 p.topNewArtists.forEach { TimelineRow(it.sub, "${it.name} · ${fmtHours(it.ms)}", accent) }
             }
@@ -384,13 +384,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
     item {
         Text(
             "${fmtInt(stats.totalEntries)} reproduções lidas de ${stats.files} arquivo(s).",
-            color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp, textAlign = TextAlign.Center,
+            color = Palette.ink.copy(alpha = 0.4f), fontSize = 12.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 28.dp),
         )
         TextButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Rounded.DeleteOutline, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.DeleteOutline, null, tint = Palette.ink.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Apagar histórico do celular", color = Color.White.copy(alpha = 0.5f))
+            Text("Apagar histórico do celular", color = Palette.ink.copy(alpha = 0.5f))
         }
     }
 }
@@ -415,7 +415,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.rankedSection(
                         Text("${i + 1}", color = if (i < 3) accent else Dim, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(30.dp))
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(r.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(r.name, color = Palette.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(detail(r), color = Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(4.dp))
                         val v = maxOf(r.ms, r.count.toLong()).toFloat() / maxValue
@@ -425,7 +425,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.rankedSection(
             }
             if (list.size > initial) {
                 TextButton(onClick = { expanded = !expanded }) {
-                    Text(if (expanded) "Mostrar menos" else "Ver todos (${list.size})", color = Color.White)
+                    Text(if (expanded) "Mostrar menos" else "Ver todos (${list.size})", color = Palette.ink)
                 }
             }
         }
@@ -439,7 +439,7 @@ private fun Hero(p: PeriodStats, accent: Color) {
             .clip(RoundedCornerShape(24.dp)).background(accent.copy(alpha = 0.24f)).padding(20.dp)
     ) {
         Text(if (p.key == "all") "Tempo total ouvindo música" else "Em ${p.key} você ouviu", color = Dim, fontSize = 13.sp)
-        Text(fmtHours(p.ms), color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
+        Text(fmtHours(p.ms), color = Palette.ink, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
         val minutes = p.ms / 60_000
         Text("${fmtInt(minutes.toInt())} minutos", color = Dim, fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
@@ -453,7 +453,7 @@ private fun Hero(p: PeriodStats, accent: Color) {
 
 @Composable
 private fun Section(title: String) {
-    Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 26.dp, bottom = 10.dp))
+    Text(title, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 26.dp, bottom = 10.dp))
 }
 
 @Composable
@@ -464,7 +464,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScop
 @Composable
 private fun MiniStat(value: String, label: String) {
     Column {
-        Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+        Text(value, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
         Text(label, color = Dim, fontSize = 12.sp)
     }
 }
@@ -473,7 +473,7 @@ private fun MiniStat(value: String, label: String) {
 private fun Record(title: String, value: String, detail: String) {
     Panel {
         Text(title, color = Dim, fontSize = 12.sp)
-        Text(value, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(value, color = Palette.ink, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(detail, color = Dim, fontSize = 12.sp)
     }
 }
@@ -484,7 +484,7 @@ private fun TimelineRow(date: String, text: String, accent: Color) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(accent))
         Spacer(Modifier.width(10.dp))
         Text(date, color = Dim, fontSize = 12.sp, modifier = Modifier.width(78.dp))
-        Text(text, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, color = Palette.ink, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -492,11 +492,11 @@ private fun TimelineRow(date: String, text: String, accent: Color) {
 private fun ShareBar(label: String, share: Float, accent: Color) {
     Column(Modifier.padding(vertical = 5.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, color = Color.White, fontSize = 14.sp)
+            Text(label, color = Palette.ink, fontSize = 14.sp)
             Text("${(share * 100).roundToInt()}%", color = Dim, fontSize = 13.sp)
         }
         Spacer(Modifier.height(4.dp))
-        Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))) {
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.1f))) {
             Box(Modifier.fillMaxWidth(share.coerceIn(0.01f, 1f)).height(6.dp).clip(CircleShape).background(accent))
         }
     }

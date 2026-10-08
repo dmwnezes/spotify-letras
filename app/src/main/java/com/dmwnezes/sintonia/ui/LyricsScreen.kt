@@ -48,6 +48,13 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.dmwnezes.sintonia.share.NowPlayingCard
+import com.dmwnezes.sintonia.share.NowPlayingInfo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -97,6 +104,11 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
+import com.dmwnezes.sintonia.lyrics.WordTiming
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.lerp
 import com.dmwnezes.sintonia.viz.AudioSpectrum
 import com.dmwnezes.sintonia.viz.VizTheme
 import kotlinx.coroutines.delay
@@ -123,8 +135,11 @@ fun LyricsScreen(
     onSetPlayerOnly: (Boolean) -> Unit,
     onSetShowTranslation: (Boolean) -> Unit,
     bottomPadding: PaddingValues,
+    onSetKaraoke: (Boolean) -> Unit = {},
+    onOpenSearch: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val view = LocalView.current
     DisposableEffect(Unit) {
         view.keepScreenOn = true
@@ -171,13 +186,13 @@ fun LyricsScreen(
             source = { if (useReal && !vizUnavailable) spectrum.levels else null },
         )
         // Véu escuro para a letra ficar legível sobre os brilhos.
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)))
+        Box(Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = if (Palette.dark) 0.28f else 0.42f)))
 
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(bottom = bottomPadding.calculateBottomPadding())) {
             val now = state.now
             when {
-                !state.firstLoadDone -> Centered { CircularProgressIndicator(color = Color.White) }
-                now?.track == null -> NothingPlaying()
+                !state.firstLoadDone -> Centered { CircularProgressIndicator(color = Palette.ink) }
+                now?.track == null -> NothingPlaying(onOpenSearch)
                 else -> {
                     val track = now.track
                     var showTune by rememberSaveable { mutableStateOf(false) }
@@ -221,13 +236,16 @@ fun LyricsScreen(
                             if (on && !hasMic) showMicDialog = true
                         },
                         onSetTheme = onSetVizTheme,
+                        karaoke = state.karaoke,
+                        onSetKaraoke = onSetKaraoke,
                         onTune = { showTune = !showTune },
                         onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
+                        onSearch = onOpenSearch,
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
                             if (onlyPlayer) BigCover(now)
-                            else LyricsBody(state.lyrics, translations, now, state.lyricsOffsetMs, onSeek, onRetryLyrics) { picked = it }
+                            else LyricsBody(state.lyrics, translations, now, state.lyricsOffsetMs, state.karaoke, onSeek, onRetryLyrics) { picked = it }
                         }
                     }
                     AnimatedVisibility(showTune && !state.playerOnly) {
@@ -237,7 +255,18 @@ fun LyricsScreen(
                         now = now,
                         playerOnly = state.playerOnly,
                         onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
-                        onShare = { showShare = true },
+                        onShareVideo = { showShare = true },
+                        onShareCard = {
+                            val pos = now.positionAt(SystemClock.elapsedRealtime())
+                            val synced = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines.orEmpty()
+                            val idx = LrcParser.indexAt(synced, pos + state.lyricsOffsetMs + ANTICIPATION_MS)
+                            val line = synced.getOrNull(idx)?.text?.takeIf { it.isNotBlank() }
+                            val tr = translations?.getOrNull(idx)
+                            scope.launch {
+                                runCatching { NowPlayingCard.share(context, NowPlayingInfo(track, pos, line, tr)) }
+                                    .onFailure { android.widget.Toast.makeText(context, "Não consegui gerar o cartão.", android.widget.Toast.LENGTH_SHORT).show() }
+                            }
+                        },
                         onTogglePlay = onTogglePlay,
                         onNext = onNext,
                         onPrevious = onPrevious,
@@ -280,23 +309,28 @@ private fun Centered(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun NothingPlaying() {
+private fun NothingPlaying(onOpenSearch: () -> Unit) {
     val context = LocalContext.current
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Nada tocando agora", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Nada tocando agora", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(10.dp))
         Text(
             "Dê o play em uma música no Spotify e a letra aparece aqui, acompanhando o tempo da música.",
-            color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp,
+            color = Palette.ink.copy(alpha = 0.7f), fontSize = 16.sp,
         )
         Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = {
+        OutlinedButton(onClick = onOpenSearch) {
+            Icon(Icons.Rounded.Search, null, tint = Palette.ink)
+            Spacer(Modifier.width(6.dp))
+            Text("Buscar uma música", color = Palette.ink)
+        }
+        TextButton(onClick = {
             context.packageManager.getLaunchIntentForPackage("com.spotify.music")?.let(context::startActivity)
-        }) { Text("Abrir o Spotify", color = Color.White) }
+        }) { Text("Abrir o Spotify", color = Palette.ink.copy(alpha = 0.8f)) }
     }
 }
 
@@ -312,8 +346,11 @@ private fun TrackHeader(
     vizUnavailable: Boolean,
     onSetRealViz: (Boolean) -> Unit,
     onSetTheme: (VizTheme) -> Unit,
+    karaoke: Boolean,
+    onSetKaraoke: (Boolean) -> Unit,
     onTune: () -> Unit,
     onNote: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     val track = now.track ?: return
     var menu by remember { mutableStateOf(false) }
@@ -328,20 +365,20 @@ private fun TrackHeader(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(track.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(track.artistLine, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(track.name, color = Palette.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(track.artistLine, color = Palette.ink.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (translation != TranslationState.None) {
                     IconButton(onClick = onToggleTranslation) {
                         Box(
                             Modifier.size(36.dp).clip(CircleShape)
-                                .background(if (showTranslation) Color.White else Color.Transparent),
+                                .background(if (showTranslation) Palette.ink else Color.Transparent),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 Icons.Rounded.Translate,
                                 contentDescription = if (showTranslation) "Esconder tradução" else "Mostrar tradução",
-                                tint = if (showTranslation) Color.Black else Color.White.copy(alpha = 0.8f),
+                                tint = if (showTranslation) Palette.onInk else Palette.ink.copy(alpha = 0.8f),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -350,21 +387,25 @@ private fun TrackHeader(
             } else {
                 Spacer(Modifier.weight(1f))
             }
+            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Buscar música", tint = Palette.ink) }
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Mais opções", tint = Color.White) }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Mais opções", tint = Palette.ink) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
                         text = { Text("Anotar um momento") },
                         leadingIcon = { Icon(Icons.Rounded.EditNote, null) },
                         onClick = { menu = false; onNote() },
                     )
-                    if (!playerOnly) DropdownMenuItem(text = { Text("Ajustar sincronia da letra") }, onClick = { menu = false; onTune() })
+                    if (!playerOnly) {
+                        DropdownMenuItem(text = { Text("Ajustar sincronia da letra") }, onClick = { menu = false; onTune() })
+                        MenuCheck("Acender palavra por palavra", karaoke) { onSetKaraoke(!karaoke); menu = false }
+                    }
                     HorizontalDivider()
-                    Text("Visualizer", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    Text("Visualizer", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                     MenuCheck("Reagir ao som real", realViz) { onSetRealViz(true); menu = false }
                     MenuCheck("Animação", !realViz) { onSetRealViz(false); menu = false }
                     HorizontalDivider()
-                    Text("Tema", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    Text("Tema", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                     VizTheme.entries.forEach { t -> MenuCheck(t.label, t == theme) { onSetTheme(t); menu = false } }
                 }
             }
@@ -377,12 +418,12 @@ private fun TrackHeader(
             else -> null
         }
         if (showTranslation && status != null && !playerOnly) {
-            Text(status, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp, end = 12.dp))
+            Text(status, color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp, end = 12.dp))
         }
         if (vizUnavailable) {
             Text(
                 "Sem leitura do som agora (volume zerado ou bloqueio do aparelho). Usando a animação.",
-                color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp,
+                color = Palette.ink.copy(alpha = 0.55f), fontSize = 12.sp,
                 modifier = Modifier.padding(top = 6.dp, end = 12.dp),
             )
         }
@@ -420,9 +461,9 @@ private fun BigCover(now: NowPlaying) {
                 .clip(RoundedCornerShape(18.dp)),
         )
         Spacer(Modifier.height(28.dp))
-        Text(track.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
-        Text(track.artistLine, color = Color.White.copy(alpha = 0.72f), fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
-        Text(track.album, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Text(track.name, color = Palette.ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Text(track.artistLine, color = Palette.ink.copy(alpha = 0.72f), fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Text(track.album, color = Palette.ink.copy(alpha = 0.5f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -433,26 +474,27 @@ private fun LyricsBody(
     translations: List<String?>?,
     now: NowPlaying,
     offsetMs: Long,
+    karaoke: Boolean,
     onSeek: (Long) -> Unit,
     onRetry: () -> Unit,
     onPick: (PickedLine) -> Unit,
 ) {
     when (lyrics) {
         LyricsState.Idle, LyricsState.Loading -> Centered {
-            Text("Buscando a letra…", color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp)
+            Text("Buscando a letra…", color = Palette.ink.copy(alpha = 0.6f), fontSize = 18.sp)
         }
         is LyricsState.Failed -> Centered {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(lyrics.message, color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
-                TextButton(onClick = onRetry) { Text("Tentar de novo", color = Color.White) }
+                Text(lyrics.message, color = Palette.ink.copy(alpha = 0.7f), fontSize = 16.sp)
+                TextButton(onClick = onRetry) { Text("Tentar de novo", color = Palette.ink) }
             }
         }
         is LyricsState.Ready -> when (val l = lyrics.lyrics) {
-            is Lyrics.Synced -> SyncedLyrics(l.lines, translations, now, offsetMs, onSeek, onPick)
+            is Lyrics.Synced -> SyncedLyrics(l.lines, translations, now, offsetMs, karaoke, onSeek, onPick)
             is Lyrics.Plain -> PlainLyrics(l.text, translations, onPick)
-            Lyrics.Instrumental -> Centered { Text("♪  Instrumental", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
+            Lyrics.Instrumental -> Centered { Text("♪  Instrumental", color = Palette.ink, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
             Lyrics.NotFound -> Centered {
-                Text("Não encontrei a letra desta música.", color = Color.White.copy(alpha = 0.7f), fontSize = 17.sp, modifier = Modifier.padding(32.dp))
+                Text("Não encontrei a letra desta música.", color = Palette.ink.copy(alpha = 0.7f), fontSize = 17.sp, modifier = Modifier.padding(32.dp))
             }
         }
     }
@@ -464,6 +506,7 @@ private fun SyncedLyrics(
     translations: List<String?>?,
     now: NowPlaying,
     offsetMs: Long,
+    karaoke: Boolean,
     onSeek: (Long) -> Unit,
     onPick: (PickedLine) -> Unit,
 ) {
@@ -503,9 +546,14 @@ private fun SyncedLyrics(
         ) {
             itemsIndexed(lines, key = { i, l -> "$i-${l.timeMs}" }) { i, line ->
                 val tr = translations?.getOrNull(i)
+                val spans = if (karaoke && i == index && line.text.isNotBlank()) {
+                    remember(line) { WordTiming.spans(line, lines.getOrNull(i + 1)?.timeMs) }
+                } else null
                 LyricLineView(
                     text = line.text,
                     translation = tr,
+                    spans = spans,
+                    positionMs = { posMs + currentOffset + 120 },
                     distance = if (index < 0) i + 1 else i - index,
                     onClick = { onSeek(line.timeMs) },
                     onLongClick = { if (line.text.isNotBlank()) onPick(PickedLine(line.text, tr, line.timeMs)) },
@@ -517,8 +565,17 @@ private fun SyncedLyrics(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LyricLineView(text: String, translation: String?, distance: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun LyricLineView(
+    text: String,
+    translation: String?,
+    distance: Int,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    spans: List<WordTiming.Span>? = null,
+    positionMs: () -> Long = { 0L },
+) {
     val active = distance == 0
+    val st = LocalLyricsStyle.current
     val alpha by animateFloatAsState(
         targetValue = when {
             active -> 1f
@@ -548,20 +605,34 @@ private fun LyricLineView(text: String, translation: String?, distance: Int, onC
             }
             .blur(blurDp),
     ) {
-        Text(
+        if (spans != null) {
+            // Karaokê: cada palavra vai acendendo conforme é cantada.
+            val prog = WordTiming.progress(spans, positionMs())
+            val dim = Palette.ink.copy(alpha = 0.42f)
+            Text(
+                text = buildAnnotatedString {
+                    spans.forEachIndexed { k, sp -> withStyle(SpanStyle(color = lerp(dim, Palette.ink, prog[k]))) { append(sp.text) } }
+                },
+                fontSize = (30 * st.k).sp,
+                lineHeight = (37 * st.k).sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = st.family,
+            )
+        } else Text(
             text = if (isBreak) "•  •  •" else text,
-            color = Color.White,
-            fontSize = if (isBreak) 22.sp else 30.sp,
-            lineHeight = 37.sp,
+            color = Palette.ink,
+            fontSize = if (isBreak) 22.sp else (30 * st.k).sp,
+            lineHeight = (37 * st.k).sp,
             fontWeight = FontWeight.ExtraBold,
+            fontFamily = st.family,
         )
         // Tradução logo abaixo, menor e mais clara, como no Spotify.
         if (!isBreak && translation != null) {
             Text(
                 text = translation,
-                color = Color.White.copy(alpha = 0.62f),
-                fontSize = 18.sp,
-                lineHeight = 23.sp,
+                color = Palette.ink.copy(alpha = 0.62f),
+                fontSize = (18 * st.scale).sp,
+                lineHeight = (23 * st.scale).sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(top = 3.dp),
             )
@@ -574,7 +645,7 @@ private fun LyricLineView(text: String, translation: String?, distance: Int, onC
 private fun PlainLyrics(text: String, translations: List<String?>?, onPick: (PickedLine) -> Unit) {
     val lines = remember(text) { text.lines() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 20.dp)) {
-        Text("Letra sem marcação de tempo para esta música.", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
+        Text("Letra sem marcação de tempo para esta música.", color = Palette.ink.copy(alpha = 0.55f), fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
         lines.forEachIndexed { i, line ->
             if (line.isBlank()) Spacer(Modifier.height(16.dp))
@@ -583,8 +654,9 @@ private fun PlainLyrics(text: String, translations: List<String?>?, onPick: (Pic
                     .combinedClickable(onClick = {}, onLongClick = { onPick(PickedLine(line, translations?.getOrNull(i), 0)) })
                     .padding(vertical = 3.dp)
             ) {
-                Text(line, color = Color.White.copy(alpha = 0.9f), fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold)
-                translations?.getOrNull(i)?.let { Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp, lineHeight = 21.sp) }
+                val st = LocalLyricsStyle.current
+                Text(line, color = Palette.ink.copy(alpha = 0.9f), fontSize = (22 * st.k).sp, lineHeight = (30 * st.k).sp, fontWeight = FontWeight.SemiBold, fontFamily = st.family)
+                translations?.getOrNull(i)?.let { Text(it, color = Palette.ink.copy(alpha = 0.6f), fontSize = 16.sp, lineHeight = 21.sp) }
             }
         }
         Spacer(Modifier.height(80.dp))
@@ -598,10 +670,10 @@ private fun OffsetTuner(offsetMs: Long, onNudge: (Long) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        TextButton(onClick = { onNudge(-250) }) { Text("Atrasar", color = Color.White) }
+        TextButton(onClick = { onNudge(-250) }) { Text("Atrasar", color = Palette.ink) }
         val s = "%+.2f s".format(offsetMs / 1000.0).replace('.', ',')
-        Text("Sincronia: $s", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp)
-        TextButton(onClick = { onNudge(250) }) { Text("Adiantar", color = Color.White) }
+        Text("Sincronia: $s", color = Palette.ink.copy(alpha = 0.85f), fontSize = 14.sp)
+        TextButton(onClick = { onNudge(250) }) { Text("Adiantar", color = Palette.ink) }
     }
 }
 
@@ -610,7 +682,8 @@ private fun PlayerControls(
     now: NowPlaying,
     playerOnly: Boolean,
     onTogglePlayerOnly: () -> Unit,
-    onShare: () -> Unit,
+    onShareVideo: () -> Unit,
+    onShareCard: () -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -628,15 +701,15 @@ private fun PlayerControls(
         LinearProgressIndicator(
             progress = { (pos.toFloat() / duration).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
-            color = Color.White,
-            trackColor = Color.White.copy(alpha = 0.22f),
+            color = Palette.ink,
+            trackColor = Palette.ink.copy(alpha = 0.22f),
             strokeCap = StrokeCap.Round,
             gapSize = 0.dp,
             drawStopIndicator = {},
         )
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(fmt(pos), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-            Text("-" + fmt(duration - pos), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text(fmt(pos), color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text("-" + fmt(duration - pos), color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp)
         }
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -647,28 +720,43 @@ private fun PlayerControls(
                 Icon(
                     if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
                     contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
-                    tint = Color.White.copy(alpha = 0.85f),
+                    tint = Palette.ink.copy(alpha = 0.85f),
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.SkipPrevious, "Anterior", tint = Palette.ink, modifier = Modifier.size(36.dp))
                 }
                 Spacer(Modifier.width(12.dp))
                 FilledIconButton(
                     onClick = onTogglePlay,
                     modifier = Modifier.size(64.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
                 ) {
                     Icon(if (now.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (now.isPlaying) "Pausar" else "Tocar", modifier = Modifier.size(36.dp))
                 }
                 Spacer(Modifier.width(12.dp))
                 IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipNext, "Próxima", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.SkipNext, "Próxima", tint = Palette.ink, modifier = Modifier.size(36.dp))
                 }
             }
-            IconButton(onClick = onShare) {
-                Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar vídeo", tint = Color.White.copy(alpha = 0.85f))
+            Box {
+                var shareMenu by remember { mutableStateOf(false) }
+                IconButton(onClick = { shareMenu = true }) {
+                    Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar", tint = Palette.ink.copy(alpha = 0.85f))
+                }
+                DropdownMenu(expanded = shareMenu, onDismissRequest = { shareMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Cartão para Stories") },
+                        leadingIcon = { Icon(Icons.Rounded.Image, null) },
+                        onClick = { shareMenu = false; onShareCard() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Vídeo com a letra (até 30 s)") },
+                        leadingIcon = { Icon(Icons.Rounded.Movie, null) },
+                        onClick = { shareMenu = false; onShareVideo() },
+                    )
+                }
             }
         }
     }

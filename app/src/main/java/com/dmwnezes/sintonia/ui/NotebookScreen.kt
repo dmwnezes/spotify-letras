@@ -80,22 +80,22 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
     var confirmDelete by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.40f)).statusBarsPadding(),
+        Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = 0.40f)).statusBarsPadding(),
         contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding.calculateBottomPadding() + 32.dp),
     ) {
         item {
-            Text("Caderno", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 20.dp))
+            Text("Caderno", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 20.dp))
             Text(
                 "Segure o dedo numa linha da letra para salvar um trecho ou anotar um momento.",
-                color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
+                color = Palette.ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
             )
             Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Trechos (${data.lines.size})", "Diário (${data.diary.size})").forEachIndexed { i, label ->
                     FilterChip(
                         selected = tab == i, onClick = { tab = i }, label = { Text(label) }, border = null,
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Color.White.copy(alpha = 0.08f), labelColor = Color.White.copy(alpha = 0.8f),
-                            selectedContainerColor = Color.White, selectedLabelColor = Color.Black,
+                            containerColor = Palette.ink.copy(alpha = 0.08f), labelColor = Palette.ink.copy(alpha = 0.8f),
+                            selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
                         ),
                     )
                 }
@@ -113,7 +113,7 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
                     Button(
                         onClick = { newNote = true },
                         modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                        colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
                     ) {
                         Icon(Icons.Rounded.Add, null)
                         Spacer(Modifier.width(6.dp))
@@ -127,7 +127,7 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
             byMonth.forEach { (month, entries) ->
                 item(key = "m-$month") {
                     Text(
-                        month.replaceFirstChar { it.uppercase() }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        month.replaceFirstChar { it.uppercase() }, color = Palette.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp),
                     )
                 }
@@ -154,9 +154,9 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
 @Composable
 private fun Empty(title: String, desc: String) {
     Column(Modifier.fillMaxWidth().padding(36.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Text(title, color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(6.dp))
-        Text(desc, color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp, textAlign = TextAlign.Center)
+        Text(desc, color = Palette.ink.copy(alpha = 0.6f), fontSize = 14.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -166,14 +166,14 @@ private fun SavedLineCard(l: SavedLine, accent: Color, onDelete: () -> Unit) {
     val scope = rememberCoroutineScope()
     Column(
         Modifier.padding(horizontal = 20.dp, vertical = 6.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp)).background(Color.White.copy(alpha = 0.08f)).padding(18.dp)
+            .clip(RoundedCornerShape(22.dp)).background(Palette.ink.copy(alpha = 0.08f)).padding(18.dp)
     ) {
         Row {
             Box(Modifier.width(4.dp).height(26.dp).clip(CircleShape).background(accent))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(l.text, color = Color.White, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold)
-                l.translation?.let { Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
+                Text(l.text, color = Palette.ink, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold)
+                l.translation?.let { Text(it, color = Palette.ink.copy(alpha = 0.6f), fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -181,16 +181,16 @@ private fun SavedLineCard(l: SavedLine, accent: Color, onDelete: () -> Unit) {
             AsyncImage(l.imageUrl, null, Modifier.size(38.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(l.track, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(l.artist, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(l.track, color = Palette.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(l.artist, color = Palette.ink.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = {
                 scope.launch {
                     runCatching { QuoteImage.share(context, Quote(l.text, l.translation, l.track, l.artist, l.imageUrl)) }
                         .onFailure { Toast.makeText(context, "Não consegui gerar a imagem.", Toast.LENGTH_SHORT).show() }
                 }
-            }) { Icon(Icons.Rounded.Image, "Compartilhar como imagem", tint = Color.White) }
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Apagar", tint = Color.White.copy(alpha = 0.6f)) }
+            }) { Icon(Icons.Rounded.Image, "Compartilhar como imagem", tint = Palette.ink) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Apagar", tint = Palette.ink.copy(alpha = 0.6f)) }
         }
     }
 }
@@ -202,23 +202,23 @@ private fun DiaryRow(e: DiaryEntry, accent: Color, onEdit: () -> Unit, onDelete:
         // linha do tempo
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 6.dp)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
-            Box(Modifier.width(2.dp).height(110.dp).background(Color.White.copy(alpha = 0.12f)))
+            Box(Modifier.width(2.dp).height(110.dp).background(Palette.ink.copy(alpha = 0.12f)))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.07f)).padding(14.dp)) {
-            Text(when_, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+        Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(Palette.ink.copy(alpha = 0.07f)).padding(14.dp)) {
+            Text(when_, color = Palette.ink.copy(alpha = 0.55f), fontSize = 12.sp)
             Spacer(Modifier.height(4.dp))
-            Text(e.note, color = Color.White, fontSize = 16.sp, lineHeight = 22.sp)
+            Text(e.note, color = Palette.ink, fontSize = 16.sp, lineHeight = 22.sp)
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(e.imageUrl, null, Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(e.track, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(e.artist, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(e.track, color = Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(e.artist, color = Palette.ink.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, "Editar", tint = Color.White.copy(alpha = 0.7f)) }
-                IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Apagar", tint = Color.White.copy(alpha = 0.6f)) }
+                IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, "Editar", tint = Palette.ink.copy(alpha = 0.7f)) }
+                IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Apagar", tint = Palette.ink.copy(alpha = 0.6f)) }
             }
         }
     }

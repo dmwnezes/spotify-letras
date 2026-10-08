@@ -8,6 +8,9 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.data.ProfileData
 import com.dmwnezes.sintonia.data.SpotifyAuth
 import com.dmwnezes.sintonia.data.TimeRange
+import com.dmwnezes.sintonia.ui.LyricsFont
+import com.dmwnezes.sintonia.ui.LyricsStyle
+import com.dmwnezes.sintonia.ui.ThemeMode
 import com.dmwnezes.sintonia.ui.TrackColors
 import com.dmwnezes.sintonia.viz.VizTheme
 import kotlinx.coroutines.async
@@ -41,6 +44,9 @@ data class UiState(
     val vizTheme: VizTheme = VizTheme.BRILHOS,
     val playerOnly: Boolean = false,
     val showTranslation: Boolean = true,
+    val karaoke: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.AUTO,
+    val lyricsStyle: LyricsStyle = LyricsStyle(),
     val liveLyrics: Boolean = false,
     val lyricsOffsetMs: Long = 0,
     val message: String? = null,
@@ -79,6 +85,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vizTheme = VizTheme.from(prefs.vizTheme),
         playerOnly = prefs.playerOnly,
         showTranslation = prefs.showTranslation,
+        karaoke = prefs.karaoke,
+        themeMode = ThemeMode.from(prefs.themeMode),
+        lyricsStyle = LyricsStyle(LyricsFont.from(prefs.lyricsFont), prefs.lyricsScale),
         liveLyrics = prefs.liveLyrics,
         lyricsOffsetMs = prefs.lyricsOffsetMs,
     )
@@ -147,6 +156,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun seek(ms: Long) = playback.seek(ms)
     fun retryLyrics() = playback.retryLyrics()
     fun playTrack(id: String) = playback.playTrack(id)
+    fun queue(id: String, name: String) = playback.queue(id, name)
 
     fun clearMessage() = _local.update { it.copy(message = null) }
     fun showMessage(m: String) = _local.update { it.copy(message = m) }
@@ -171,6 +181,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setShowTranslation(on: Boolean) {
         playback.setTranslationEnabled(on)
         _local.update { it.copy(showTranslation = on) }
+    }
+
+    fun setThemeMode(m: ThemeMode) {
+        prefs.themeMode = m.name
+        _local.update { it.copy(themeMode = m) }
+    }
+
+    fun setLyricsStyle(st: LyricsStyle) {
+        prefs.lyricsFont = st.font.name
+        prefs.lyricsScale = st.scale
+        _local.update { it.copy(lyricsStyle = st) }
+    }
+
+    fun setKaraoke(on: Boolean) {
+        prefs.karaoke = on
+        _local.update { it.copy(karaoke = on) }
     }
 
     fun setLiveLyrics(on: Boolean) {

@@ -123,28 +123,28 @@ fun QuizDialog(accent: Color, onPlay: (String) -> Unit, onDismiss: () -> Unit) {
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(
-            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.55f), Color(0xFF0B0712), Color(0xFF050308))))
+            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.55f), Palette.surface, Palette.surface)))
         ) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Quiz da letra", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Quiz da letra", color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                         val s = ui
-                        if (s is QuizUi.Asking) Text("Pergunta ${s.round} de $ROUNDS · $score ponto(s)", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                        if (s is QuizUi.Asking) Text("Pergunta ${s.round} de $ROUNDS · $score ponto(s)", color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, "Fechar", tint = Color.White) }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, "Fechar", tint = Palette.ink) }
                 }
                 AnimatedContent(ui, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(200)) }, label = "quiz", modifier = Modifier.weight(1f)) { s ->
                     when (s) {
                         QuizUi.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = Color.White)
+                                CircularProgressIndicator(color = Palette.ink)
                                 Spacer(Modifier.height(12.dp))
-                                Text("Escolhendo um trecho…", color = Color.White.copy(alpha = 0.7f))
+                                Text("Escolhendo um trecho…", color = Palette.ink.copy(alpha = 0.7f))
                             }
                         }
                         is QuizUi.Error -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text(s.message, color = Color.White, fontSize = 17.sp, textAlign = TextAlign.Center)
+                            Text(s.message, color = Palette.ink, fontSize = 17.sp, textAlign = TextAlign.Center)
                         }
                         is QuizUi.Asking -> Question(s, onPick = { t ->
                             if (s.picked == null) {
@@ -165,13 +165,13 @@ private fun Question(s: QuizUi.Asking, onPick: (Track) -> Unit, onPlay: () -> Un
     val answered = s.picked != null
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(18.dp))
-        Text("De qual música é este trecho?", color = Color.White.copy(alpha = 0.75f), fontSize = 15.sp)
+        Text("De qual música é este trecho?", color = Palette.ink.copy(alpha = 0.75f), fontSize = 15.sp)
         Spacer(Modifier.height(12.dp))
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White.copy(alpha = 0.09f)).padding(22.dp)
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Palette.ink.copy(alpha = 0.09f)).padding(22.dp)
         ) {
-            Text("“", color = Color.White.copy(alpha = 0.5f), fontSize = 54.sp, fontWeight = FontWeight.Black, lineHeight = 40.sp)
-            s.q.excerpt.forEach { Text(it, color = Color.White, fontSize = 23.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold) }
+            Text("“", color = Palette.ink.copy(alpha = 0.5f), fontSize = 54.sp, fontWeight = FontWeight.Black, lineHeight = 40.sp)
+            s.q.excerpt.forEach { Text(it, color = Palette.ink, fontSize = 23.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold) }
         }
         Spacer(Modifier.height(18.dp))
         s.q.options.forEach { t ->
@@ -184,7 +184,7 @@ private fun Question(s: QuizUi.Asking, onPick: (Track) -> Unit, onPlay: () -> Un
             }
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = if (answered && !isAnswer && t.id != s.picked?.id) 0.04f else 0.10f))
+                    .background(Palette.ink.copy(alpha = if (answered && !isAnswer && t.id != s.picked?.id) 0.04f else 0.10f))
                     .border(2.dp, border, RoundedCornerShape(16.dp))
                     .clickable(enabled = !answered) { onPick(t) }
                     .padding(10.dp),
@@ -193,8 +193,8 @@ private fun Question(s: QuizUi.Asking, onPick: (Track) -> Unit, onPlay: () -> Un
                 AsyncImage(t.imageUrl, null, Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(t.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(t.artistLine, color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(t.name, color = Palette.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(t.artistLine, color = Palette.ink.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -208,13 +208,13 @@ private fun Question(s: QuizUi.Asking, onPick: (Track) -> Unit, onPlay: () -> Un
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.PlayArrow, null, tint = Color.White)
+                    Icon(Icons.Rounded.PlayArrow, null, tint = Palette.ink)
                     Spacer(Modifier.width(4.dp))
-                    Text("Ouvir", color = Color.White)
+                    Text("Ouvir", color = Palette.ink)
                 }
                 Button(
                     onClick = onNext, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
                 ) { Text(if (s.round >= ROUNDS) "Ver resultado" else "Próxima") }
             }
         }
@@ -231,18 +231,18 @@ private fun Finished(s: QuizUi.Finished, onAgain: () -> Unit, onClose: () -> Uni
         else -> "Hora de prestar mais atenção nas letras 😄"
     }
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("${s.score}/$ROUNDS", color = Color.White, fontSize = 72.sp, fontWeight = FontWeight.Black)
-        Text(msg, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("${s.score}/$ROUNDS", color = Palette.ink, fontSize = 72.sp, fontWeight = FontWeight.Black)
+        Text(msg, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
             if (s.newRecord) "Novo recorde!" else "Seu recorde: ${s.best}/$ROUNDS",
-            color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp,
+            color = Palette.ink.copy(alpha = 0.7f), fontSize = 15.sp,
         )
         Spacer(Modifier.height(28.dp))
-        Button(onClick = onAgain, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black), modifier = Modifier.fillMaxWidth().height(50.dp)) {
+        Button(onClick = onAgain, colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk), modifier = Modifier.fillMaxWidth().height(50.dp)) {
             Text("Jogar de novo", fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Fechar", color = Color.White) }
+        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Fechar", color = Palette.ink) }
     }
 }

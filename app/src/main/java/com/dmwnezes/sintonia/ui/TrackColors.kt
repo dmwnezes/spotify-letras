@@ -13,6 +13,8 @@ data class TrackColors(
     val glow1: Color,     // brilhos do visualizer
     val glow2: Color,
     val glow3: Color,
+    val soft1: Color = Color(0xFFF3E8FF), // tons claros da capa (tema claro)
+    val soft2: Color = Color(0xFFFFE6EE),
 ) {
     companion object {
         val Default = TrackColors(
@@ -36,6 +38,8 @@ data class TrackColors(
                 glow1 = brighten(vibrant),
                 glow2 = brighten(lightV),
                 glow3 = brighten(lerp(dominant, vibrant, 0.5f)),
+                soft1 = pastel(dominant),
+                soft2 = pastel(vibrant),
             )
         }
 
@@ -45,6 +49,15 @@ data class TrackColors(
             ColorUtils.colorToHSL(c.toArgb(), hsl)
             hsl[2] = minOf(hsl[2], l)
             hsl[1] = minOf(hsl[1], 0.75f)
+            return Color(ColorUtils.HSLToColor(hsl))
+        }
+
+        /** Versão bem clara da cor, para o fundo do tema claro. */
+        private fun pastel(c: Color): Color {
+            val hsl = FloatArray(3)
+            ColorUtils.colorToHSL(c.toArgb(), hsl)
+            hsl[2] = 0.90f
+            hsl[1] = hsl[1].coerceIn(0.25f, 0.65f)
             return Color(ColorUtils.HSLToColor(hsl))
         }
 

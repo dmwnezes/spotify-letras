@@ -45,6 +45,10 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sintonia" android:host="callback" />
             </intent-filter>
+            <!-- Atalhos ao segurar o ícone -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <service

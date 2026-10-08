@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="letra"
+        android:enabled="true"
+        android:icon="@drawable/sc_letra"
+        android:shortcutShortLabel="@string/sc_letra">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dmwnezes.sintonia"
+            android:targetClass="com.dmwnezes.sintonia.MainActivity">
+            <extra android:name="abrir" android:value="letra" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="buscar"
+        android:enabled="true"
+        android:icon="@drawable/sc_buscar"
+        android:shortcutShortLabel="@string/sc_buscar">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dmwnezes.sintonia"
+            android:targetClass="com.dmwnezes.sintonia.MainActivity">
+            <extra android:name="abrir" android:value="buscar" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="caderno"
+        android:enabled="true"
+        android:icon="@drawable/sc_caderno"
+        android:shortcutShortLabel="@string/sc_caderno">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dmwnezes.sintonia"
+            android:targetClass="com.dmwnezes.sintonia.MainActivity">
+            <extra android:name="abrir" android:value="caderno" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="quiz"
+        android:enabled="true"
+        android:icon="@drawable/sc_quiz"
+        android:shortcutShortLabel="@string/sc_quiz">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dmwnezes.sintonia"
+            android:targetClass="com.dmwnezes.sintonia.MainActivity">
+            <extra android:name="abrir" android:value="quiz" />
+        </intent>
+    </shortcut>
+</shortcuts>

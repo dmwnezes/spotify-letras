@@ -42,6 +42,8 @@ fun SettingsDialog(
     onTranslation: (Boolean) -> Unit,
     onTheme: (VizTheme) -> Unit,
     onCheckUpdates: () -> Unit,
+    onThemeMode: (ThemeMode) -> Unit = {},
+    onLyricsStyle: (LyricsStyle) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -56,6 +58,36 @@ fun SettingsDialog(
         title = { Text("Ajustes") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Aparência", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ThemeMode.entries.forEach { m -> FilterChip(selected = m == state.themeMode, onClick = { onThemeMode(m) }, label = { Text(m.label) }) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Fonte da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f))
+                val st = state.lyricsStyle
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LyricsFont.entries.take(2).forEach { f ->
+                        FilterChip(selected = f == st.font, onClick = { onLyricsStyle(st.copy(font = f)) }, label = { Text(f.label, fontFamily = f.family) })
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LyricsFont.entries.drop(2).forEach { f ->
+                        FilterChip(selected = f == st.font, onClick = { onLyricsStyle(st.copy(font = f)) }, label = { Text(f.label, fontFamily = f.family) })
+                    }
+                }
+                Text("Tamanho da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f), modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("P" to 0.85f, "M" to 1f, "G" to 1.15f, "GG" to 1.3f).forEach { (label, k) ->
+                        FilterChip(selected = st.scale == k, onClick = { onLyricsStyle(st.copy(scale = k)) }, label = { Text(label) })
+                    }
+                }
+                Text(
+                    "Assim fica a letra",
+                    fontFamily = st.family, fontWeight = FontWeight.ExtraBold, fontSize = (24 * st.k).sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 SettingSwitch(
                     title = "Letra na tela de bloqueio e no widget",
                     desc = "Mostra a linha que está tocando numa notificação (visível com o celular bloqueado) e no widget. " +
@@ -74,7 +106,7 @@ fun SettingsDialog(
                 }
                 Text(
                     "Para colocar o widget: segure o dedo na tela inicial → Widgets → Sintonia.",
-                    fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(top = 4.dp),
+                    fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.5f), modifier = Modifier.padding(top = 4.dp),
                 )
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 SettingSwitch(
@@ -97,7 +129,7 @@ fun SettingsDialog(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Atualizações", fontWeight = FontWeight.SemiBold)
-                        Text("Versão instalada: ${Updater.currentName}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                        Text("Versão instalada: ${Updater.currentName}", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f))
                     }
                     androidx.compose.material3.OutlinedButton(onClick = onCheckUpdates) { Text("Buscar") }
                 }
@@ -114,7 +146,7 @@ private fun SettingSwitch(title: String, desc: String, checked: Boolean, onChang
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.SemiBold)
-            Text(desc, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), lineHeight = 16.sp)
+            Text(desc, fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), lineHeight = 16.sp)
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onChange)
