@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.dmwnezes.sintonia.UiState
 import com.dmwnezes.sintonia.live.LiveLyricsService
+import com.dmwnezes.sintonia.update.Updater
 import com.dmwnezes.sintonia.viz.VizTheme
 
 @Composable
@@ -40,6 +41,7 @@ fun SettingsDialog(
     onLiveLyrics: (Boolean) -> Unit,
     onTranslation: (Boolean) -> Unit,
     onTheme: (VizTheme) -> Unit,
+    onCheckUpdates: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -90,6 +92,14 @@ fun SettingsDialog(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     VizTheme.entries.drop(2).forEach { t -> FilterChip(selected = t == state.vizTheme, onClick = { onTheme(t) }, label = { Text(t.label) }) }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Atualizações", fontWeight = FontWeight.SemiBold)
+                        Text("Versão instalada: ${Updater.currentName}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                    }
+                    androidx.compose.material3.OutlinedButton(onClick = onCheckUpdates) { Text("Buscar") }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 CreatorCredit()

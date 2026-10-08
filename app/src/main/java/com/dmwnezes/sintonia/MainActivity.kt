@@ -51,6 +51,9 @@ import com.dmwnezes.sintonia.ui.ProfileScreen
 import com.dmwnezes.sintonia.ui.QuizDialog
 import com.dmwnezes.sintonia.ui.SettingsDialog
 import com.dmwnezes.sintonia.ui.SplashCredits
+import com.dmwnezes.sintonia.update.Release
+import com.dmwnezes.sintonia.update.UpdateDialog
+import com.dmwnezes.sintonia.update.Updater
 import com.dmwnezes.sintonia.wrapped.WrappedDialog
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -119,6 +122,16 @@ class MainActivity : ComponentActivity() {
         var showSettings by remember { mutableStateOf(false) }
         var showQuiz by remember { mutableStateOf(false) }
         var wrappedKey by remember { mutableStateOf<String?>(null) }
+        var showUpdate by remember { mutableStateOf(false) }
+        var foundUpdate by remember { mutableStateOf<Release?>(null) }
+
+        // Checa atualização uma vez ao abrir; só avisa se a pessoa não dispensou esta versão.
+        LaunchedEffect(Unit) {
+            val updater = Updater(AppGraph.http)
+            runCatching { updater.latest() }.getOrNull()?.let { r ->
+                if (updater.isNewer(r) && AppGraph.prefs.skippedUpdate != r.tag) foundUpdate = r
+            }
+        }
         val snackbar = remember { SnackbarHostState() }
 
         LaunchedEffect(state.message) {
@@ -217,8 +230,13 @@ class MainActivity : ComponentActivity() {
                 onLiveLyrics = vm::setLiveLyrics,
                 onTranslation = vm::setShowTranslation,
                 onTheme = vm::setVizTheme,
+                onCheckUpdates = { showSettings = false; showUpdate = true },
                 onDismiss = { showSettings = false },
             )
+        }
+        if (showUpdate) UpdateDialog(onDismiss = { showUpdate = false })
+        foundUpdate?.let { r ->
+            UpdateDialog(initial = r, onSkip = { AppGraph.prefs.skippedUpdate = it.tag }, onDismiss = { foundUpdate = null })
         }
         if (showQuiz) {
             QuizDialog(accent = state.colors.glow1, onPlay = vm::playTrack, onDismiss = { showQuiz = false })

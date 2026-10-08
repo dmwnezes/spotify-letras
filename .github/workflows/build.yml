@@ -35,6 +35,6 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Sintonia 1.0.${{ github.run_number }}
-          body: "Baixe o **Sintonia.apk** abaixo e instale no celular."
+          body: ${{ github.event.head_commit.message }}
           files: Sintonia.apk
           make_latest: true

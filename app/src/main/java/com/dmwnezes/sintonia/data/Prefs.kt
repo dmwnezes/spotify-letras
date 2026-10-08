@@ -54,6 +54,11 @@ class Prefs(context: Context) {
         get() = sp.getString("viz_theme", "BRILHOS") ?: "BRILHOS"
         set(v) = sp.edit().putString("viz_theme", v).apply()
 
+    /** Versão que a pessoa pediu para não lembrar de novo ("Agora não"). */
+    var skippedUpdate: String?
+        get() = sp.getString("skipped_update", null)
+        set(v) = sp.edit().putString("skipped_update", v).apply()
+
     var quizBest: Int
         get() = sp.getInt("quiz_best", 0)
         set(v) = sp.edit().putInt("quiz_best", v).apply()
