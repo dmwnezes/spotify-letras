@@ -1,6 +1,11 @@
 # Sintonia
 
-App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som. Também tem uma aba de **Perfil Musical** com seus artistas, músicas e gêneros mais ouvidos.
+App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
+
+- **Letras:** letra sincronizada ou modo só player (capa grande), visualizer e controles.
+- **Compartilhar:** gera um vídeo (Stories 9:16 ou quadrado) com capa e letra de um trecho de até 30 s.
+- **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
+- **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas e uma retrospectiva. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
 
 ## Instalar no celular
 
@@ -28,6 +33,14 @@ Se o login der erro 403, abra **User Management** no painel do app e adicione o 
 - **Visualizer:** usa o recurso do Android que lê o espectro do som que sai do celular. Por isso pede a permissão de "gravar áudio" — nada é gravado nem enviado. Se o aparelho bloquear, cai para uma animação nas cores da capa.
 - **Ajuste de sincronia:** o botão de ajuste (ícone de controles) adianta ou atrasa a letra em passos de 0,25 s.
 
+## Histórico completo
+
+1. Em spotify.com → Conta → Privacidade, peça o **Histórico de streaming estendido**.
+2. Quando chegar o e-mail, baixe o .zip no celular.
+3. Na aba **Histórico**, toque em **Ler arquivo** e escolha o .zip.
+
+Tudo é calculado no celular. O backup exportado pode ser aberto de novo pelo mesmo botão.
+
 ## Estrutura
 
 ```
@@ -36,6 +49,8 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── AppViewModel.kt        estado do app, consultas e controles
 ├── data/                  login (PKCE) e Web API do Spotify
 ├── lyrics/                LRCLIB e leitura do formato LRC
+├── history/               leitura e estatísticas do histórico do Spotify
+├── share/                 vídeo de compartilhamento (MediaCodec)
 ├── viz/AudioSpectrum.kt   leitura do espectro de áudio
 └── ui/                    telas e visualizer
 ```

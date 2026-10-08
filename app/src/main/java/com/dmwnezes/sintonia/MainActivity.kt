@@ -10,6 +10,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
@@ -35,7 +36,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.dmwnezes.sintonia.history.HistoryViewModel
 import com.dmwnezes.sintonia.ui.AppBackground
+import com.dmwnezes.sintonia.ui.HistoryScreen
 import com.dmwnezes.sintonia.ui.LoginScreen
 import com.dmwnezes.sintonia.ui.LyricsScreen
 import com.dmwnezes.sintonia.ui.ProfileScreen
@@ -45,6 +48,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val vm: AppViewModel by viewModels()
+    private val historyVm: HistoryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -93,6 +97,7 @@ class MainActivity : ComponentActivity() {
         val state by vm.ui.collectAsStateWithLifecycle()
         val profile by vm.profile.collectAsStateWithLifecycle()
         val range by vm.profileRange.collectAsStateWithLifecycle()
+        val history by historyVm.ui.collectAsStateWithLifecycle()
         var tab by rememberSaveable { mutableIntStateOf(0) }
         val snackbar = remember { SnackbarHostState() }
 
@@ -100,6 +105,12 @@ class MainActivity : ComponentActivity() {
             state.message?.let {
                 snackbar.showSnackbar(it)
                 vm.clearMessage()
+            }
+        }
+        LaunchedEffect(history.message) {
+            history.message?.let {
+                snackbar.showSnackbar(it)
+                historyVm.clearMessage()
             }
         }
 
@@ -121,7 +132,11 @@ class MainActivity : ComponentActivity() {
                     )
                     NavigationBarItem(
                         selected = tab == 1, onClick = { tab = 1 },
-                        icon = { Icon(Icons.Rounded.Person, null) }, label = { Text("Perfil Musical") }, colors = itemColors,
+                        icon = { Icon(Icons.Rounded.Person, null) }, label = { Text("Perfil") }, colors = itemColors,
+                    )
+                    NavigationBarItem(
+                        selected = tab == 2, onClick = { tab = 2 },
+                        icon = { Icon(Icons.Rounded.History, null) }, label = { Text("Histórico") }, colors = itemColors,
                     )
                 }
             },
@@ -138,6 +153,16 @@ class MainActivity : ComponentActivity() {
                         onNudgeOffset = vm::nudgeOffset,
                         onSetPlayerOnly = vm::setPlayerOnly,
                         onRetryLyrics = vm::retryLyrics,
+                        bottomPadding = padding,
+                    )
+                    2 -> HistoryScreen(
+                        ui = history,
+                        accent = state.colors.glow1,
+                        onImport = historyVm::import,
+                        onSelect = historyVm::select,
+                        summaryText = historyVm::summaryText,
+                        onSaveBackup = historyVm::saveBackup,
+                        onClear = historyVm::clear,
                         bottomPadding = padding,
                     )
                     else -> ProfileScreen(

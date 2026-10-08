@@ -38,5 +38,16 @@
                 <data android:scheme="sintonia" android:host="callback" />
             </intent-filter>
         </activity>
+
+        <!-- Entrega o vídeo gerado para outros apps (Instagram, WhatsApp…) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.arquivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

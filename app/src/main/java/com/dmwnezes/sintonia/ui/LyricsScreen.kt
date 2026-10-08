@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
@@ -163,7 +164,19 @@ fun LyricsScreen(
                 now?.track == null -> NothingPlaying()
                 else -> {
                     var showTune by rememberSaveable { mutableStateOf(false) }
+                    var showShare by remember { mutableStateOf(false) }
+                    if (showShare) {
+                        val lines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines.orEmpty()
+                        ShareVideoDialog(
+                            track = now.track,
+                            lines = lines,
+                            positionMs = now.positionAt(SystemClock.elapsedRealtime()),
+                            colors = state.colors,
+                            onDismiss = { showShare = false },
+                        )
+                    }
                     TrackHeader(
+                        onShare = { showShare = true },
                         now = now,
                         playerOnly = state.playerOnly,
                         onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
@@ -248,6 +261,7 @@ private fun NothingPlaying() {
 
 @Composable
 private fun TrackHeader(
+    onShare: () -> Unit,
     now: NowPlaying,
     playerOnly: Boolean,
     onTogglePlayerOnly: () -> Unit,
@@ -276,6 +290,9 @@ private fun TrackHeader(
                 }
             } else {
                 Spacer(Modifier.weight(1f))
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar vídeo", tint = Color.White)
             }
             IconButton(onClick = onTogglePlayerOnly) {
                 Icon(
