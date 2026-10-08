@@ -9,8 +9,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +19,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,18 +38,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -86,18 +91,23 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.dmwnezes.sintonia.LyricsState
+import com.dmwnezes.sintonia.TranslationState
 import com.dmwnezes.sintonia.UiState
 import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
 import com.dmwnezes.sintonia.viz.AudioSpectrum
+import com.dmwnezes.sintonia.viz.VizTheme
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.max
 
 /** Antecipação para a linha acender um instante antes de ser cantada, como nos apps de música. */
 private const val ANTICIPATION_MS = 250L
+
+/** Linha escolhida ao segurar o dedo, com a tradução quando houver. */
+data class PickedLine(val text: String, val translation: String?, val timeMs: Long)
 
 @Composable
 fun LyricsScreen(
@@ -107,9 +117,11 @@ fun LyricsScreen(
     onPrevious: () -> Unit,
     onSeek: (Long) -> Unit,
     onSetRealViz: (Boolean) -> Unit,
+    onSetVizTheme: (VizTheme) -> Unit,
     onNudgeOffset: (Long) -> Unit,
     onRetryLyrics: () -> Unit,
     onSetPlayerOnly: (Boolean) -> Unit,
+    onSetShowTranslation: (Boolean) -> Unit,
     bottomPadding: PaddingValues,
 ) {
     val context = LocalContext.current
@@ -148,10 +160,14 @@ fun LyricsScreen(
         }
     }
 
+    val translations: List<String?>? =
+        (state.translation as? TranslationState.Ready)?.lines?.takeIf { state.showTranslation }
+
     Box(Modifier.fillMaxSize()) {
         VisualizerCanvas(
             colors = state.colors,
             playing = playing,
+            theme = state.vizTheme,
             source = { if (useReal && !vizUnavailable) spectrum.levels else null },
         )
         // Véu escuro para a letra ficar legível sobre os brilhos.
@@ -163,44 +179,69 @@ fun LyricsScreen(
                 !state.firstLoadDone -> Centered { CircularProgressIndicator(color = Color.White) }
                 now?.track == null -> NothingPlaying()
                 else -> {
+                    val track = now.track
                     var showTune by rememberSaveable { mutableStateOf(false) }
                     var showShare by remember { mutableStateOf(false) }
+                    var picked by remember { mutableStateOf<PickedLine?>(null) }
+                    var noteFor by remember { mutableStateOf<Long?>(null) }
+
                     if (showShare) {
                         val lines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines.orEmpty()
                         ShareVideoDialog(
-                            track = now.track,
+                            track = track,
                             lines = lines,
                             positionMs = now.positionAt(SystemClock.elapsedRealtime()),
                             colors = state.colors,
                             onDismiss = { showShare = false },
                         )
                     }
+                    picked?.let { p ->
+                        LineActionsSheet(
+                            track = track,
+                            line = p,
+                            onDismiss = { picked = null },
+                            onNote = { picked = null; noteFor = p.timeMs },
+                        )
+                    }
+                    noteFor?.let { pos ->
+                        NoteDialog(track = track, positionMs = pos, onDismiss = { noteFor = null })
+                    }
+
                     TrackHeader(
-                        onShare = { showShare = true },
                         now = now,
                         playerOnly = state.playerOnly,
-                        onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
-                        realViz = useReal,
+                        translation = state.translation,
+                        showTranslation = state.showTranslation,
+                        onToggleTranslation = { onSetShowTranslation(!state.showTranslation) },
+                        realViz = state.realAudioViz,
+                        theme = state.vizTheme,
                         vizUnavailable = vizUnavailable && useReal,
-                        onToggleViz = {
-                            if (state.realAudioViz) onSetRealViz(false)
-                            else {
-                                onSetRealViz(true)
-                                if (!hasMic) showMicDialog = true
-                            }
+                        onSetRealViz = { on ->
+                            onSetRealViz(on)
+                            if (on && !hasMic) showMicDialog = true
                         },
+                        onSetTheme = onSetVizTheme,
                         onTune = { showTune = !showTune },
+                        onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
                             if (onlyPlayer) BigCover(now)
-                            else LyricsBody(state.lyrics, now, state.lyricsOffsetMs, onSeek, onRetryLyrics)
+                            else LyricsBody(state.lyrics, translations, now, state.lyricsOffsetMs, onSeek, onRetryLyrics) { picked = it }
                         }
                     }
                     AnimatedVisibility(showTune && !state.playerOnly) {
                         OffsetTuner(state.lyricsOffsetMs, onNudgeOffset)
                     }
-                    PlayerControls(now, onTogglePlay, onNext, onPrevious)
+                    PlayerControls(
+                        now = now,
+                        playerOnly = state.playerOnly,
+                        onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
+                        onShare = { showShare = true },
+                        onTogglePlay = onTogglePlay,
+                        onNext = onNext,
+                        onPrevious = onPrevious,
+                    )
                 }
             }
         }
@@ -261,17 +302,22 @@ private fun NothingPlaying() {
 
 @Composable
 private fun TrackHeader(
-    onShare: () -> Unit,
     now: NowPlaying,
     playerOnly: Boolean,
-    onTogglePlayerOnly: () -> Unit,
+    translation: TranslationState,
+    showTranslation: Boolean,
+    onToggleTranslation: () -> Unit,
     realViz: Boolean,
+    theme: VizTheme,
     vizUnavailable: Boolean,
-    onToggleViz: () -> Unit,
+    onSetRealViz: (Boolean) -> Unit,
+    onSetTheme: (VizTheme) -> Unit,
     onTune: () -> Unit,
+    onNote: () -> Unit,
 ) {
     val track = now.track ?: return
-    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp)) {
+    var menu by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 12.dp)) {
         Row(Modifier.height(56.dp), verticalAlignment = Alignment.CenterVertically) {
             if (!playerOnly) {
                 AsyncImage(
@@ -285,29 +331,53 @@ private fun TrackHeader(
                     Text(track.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(track.artistLine, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                IconButton(onClick = onTune) {
-                    Icon(Icons.Rounded.Tune, contentDescription = "Ajustar sincronia", tint = Color.White.copy(alpha = 0.8f))
+                if (translation != TranslationState.None) {
+                    IconButton(onClick = onToggleTranslation) {
+                        Box(
+                            Modifier.size(36.dp).clip(CircleShape)
+                                .background(if (showTranslation) Color.White else Color.Transparent),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Translate,
+                                contentDescription = if (showTranslation) "Esconder tradução" else "Mostrar tradução",
+                                tint = if (showTranslation) Color.Black else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
                 }
             } else {
                 Spacer(Modifier.weight(1f))
             }
-            IconButton(onClick = onShare) {
-                Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar vídeo", tint = Color.White)
+            Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Mais opções", tint = Color.White) }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Anotar um momento") },
+                        leadingIcon = { Icon(Icons.Rounded.EditNote, null) },
+                        onClick = { menu = false; onNote() },
+                    )
+                    if (!playerOnly) DropdownMenuItem(text = { Text("Ajustar sincronia da letra") }, onClick = { menu = false; onTune() })
+                    HorizontalDivider()
+                    Text("Visualizer", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    MenuCheck("Reagir ao som real", realViz) { onSetRealViz(true); menu = false }
+                    MenuCheck("Animação", !realViz) { onSetRealViz(false); menu = false }
+                    HorizontalDivider()
+                    Text("Tema", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    VizTheme.entries.forEach { t -> MenuCheck(t.label, t == theme) { onSetTheme(t); menu = false } }
+                }
             }
-            IconButton(onClick = onTogglePlayerOnly) {
-                Icon(
-                    if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
-                    contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
-                    tint = Color.White,
-                )
-            }
-            IconButton(onClick = onToggleViz) {
-                Icon(
-                    if (realViz) Icons.Rounded.GraphicEq else Icons.Rounded.AutoAwesome,
-                    contentDescription = if (realViz) "Visualizer: som real" else "Visualizer: animado",
-                    tint = Color.White,
-                )
-            }
+        }
+        val status = when (translation) {
+            is TranslationState.Loading ->
+                if (translation.downloading) "Baixando o tradutor de ${translation.language} (só na primeira vez)…"
+                else "Traduzindo do ${translation.language}…"
+            is TranslationState.Failed -> translation.message
+            else -> null
+        }
+        if (showTranslation && status != null && !playerOnly) {
+            Text(status, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp, end = 12.dp))
         }
         if (vizUnavailable) {
             Text(
@@ -317,6 +387,15 @@ private fun TrackHeader(
             )
         }
     }
+}
+
+@Composable
+private fun MenuCheck(label: String, checked: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        trailingIcon = { if (checked) Icon(Icons.Rounded.Check, null) },
+        onClick = onClick,
+    )
 }
 
 /** Modo só player: capa grande que encolhe um pouco quando a música pausa. */
@@ -341,18 +420,9 @@ private fun BigCover(now: NowPlaying) {
                 .clip(RoundedCornerShape(18.dp)),
         )
         Spacer(Modifier.height(28.dp))
-        Text(
-            track.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
-            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            track.artistLine, color = Color.White.copy(alpha = 0.72f), fontSize = 17.sp,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            track.album, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth(),
-        )
+        Text(track.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Text(track.artistLine, color = Color.White.copy(alpha = 0.72f), fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Text(track.album, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -360,10 +430,12 @@ private fun BigCover(now: NowPlaying) {
 @Composable
 private fun LyricsBody(
     lyrics: LyricsState,
+    translations: List<String?>?,
     now: NowPlaying,
     offsetMs: Long,
     onSeek: (Long) -> Unit,
     onRetry: () -> Unit,
+    onPick: (PickedLine) -> Unit,
 ) {
     when (lyrics) {
         LyricsState.Idle, LyricsState.Loading -> Centered {
@@ -376,22 +448,25 @@ private fun LyricsBody(
             }
         }
         is LyricsState.Ready -> when (val l = lyrics.lyrics) {
-            is Lyrics.Synced -> SyncedLyrics(l.lines, now, offsetMs, onSeek)
-            is Lyrics.Plain -> PlainLyrics(l.text)
+            is Lyrics.Synced -> SyncedLyrics(l.lines, translations, now, offsetMs, onSeek, onPick)
+            is Lyrics.Plain -> PlainLyrics(l.text, translations, onPick)
             Lyrics.Instrumental -> Centered { Text("♪  Instrumental", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
             Lyrics.NotFound -> Centered {
-                Text(
-                    "Não encontrei a letra desta música.",
-                    color = Color.White.copy(alpha = 0.7f), fontSize = 17.sp,
-                    modifier = Modifier.padding(32.dp),
-                )
+                Text("Não encontrei a letra desta música.", color = Color.White.copy(alpha = 0.7f), fontSize = 17.sp, modifier = Modifier.padding(32.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SyncedLyrics(lines: List<LyricLine>, now: NowPlaying, offsetMs: Long, onSeek: (Long) -> Unit) {
+private fun SyncedLyrics(
+    lines: List<LyricLine>,
+    translations: List<String?>?,
+    now: NowPlaying,
+    offsetMs: Long,
+    onSeek: (Long) -> Unit,
+    onPick: (PickedLine) -> Unit,
+) {
     // Posição da música atualizada ~12x por segundo, sem recompor a tela inteira.
     var posMs by remember { mutableLongStateOf(now.positionAt(SystemClock.elapsedRealtime())) }
     val currentNow by rememberUpdatedState(now)
@@ -427,18 +502,22 @@ private fun SyncedLyrics(lines: List<LyricLine>, now: NowPlaying, offsetMs: Long
             modifier = Modifier.fillMaxSize(),
         ) {
             itemsIndexed(lines, key = { i, l -> "$i-${l.timeMs}" }) { i, line ->
+                val tr = translations?.getOrNull(i)
                 LyricLineView(
                     text = line.text,
+                    translation = tr,
                     distance = if (index < 0) i + 1 else i - index,
                     onClick = { onSeek(line.timeMs) },
+                    onLongClick = { if (line.text.isNotBlank()) onPick(PickedLine(line.text, tr, line.timeMs)) },
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LyricLineView(text: String, distance: Int, onClick: () -> Unit) {
+private fun LyricLineView(text: String, translation: String?, distance: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
     val active = distance == 0
     val alpha by animateFloatAsState(
         targetValue = when {
@@ -451,15 +530,15 @@ private fun LyricLineView(text: String, distance: Int, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (active) 1f else 0.94f, tween(350), label = "scale")
     val blurDp = if (abs(distance) >= 2) 1.5.dp else 0.dp
     val isBreak = text.isBlank()
-    Text(
-        text = if (isBreak) "•  •  •" else text,
-        color = Color.White,
-        fontSize = if (isBreak) 22.sp else 30.sp,
-        lineHeight = 37.sp,
-        fontWeight = FontWeight.ExtraBold,
-        modifier = Modifier
+    Column(
+        Modifier
             .fillMaxWidth()
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
             .padding(horizontal = 26.dp, vertical = 11.dp)
             .graphicsLayer {
                 this.alpha = alpha
@@ -468,20 +547,46 @@ private fun LyricLineView(text: String, distance: Int, onClick: () -> Unit) {
                 transformOrigin = TransformOrigin(0f, 0.5f)
             }
             .blur(blurDp),
-    )
-}
-
-@Composable
-private fun PlainLyrics(text: String) {
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 20.dp)
     ) {
         Text(
-            "Letra sem marcação de tempo para esta música.",
-            color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp,
+            text = if (isBreak) "•  •  •" else text,
+            color = Color.White,
+            fontSize = if (isBreak) 22.sp else 30.sp,
+            lineHeight = 37.sp,
+            fontWeight = FontWeight.ExtraBold,
         )
+        // Tradução logo abaixo, menor e mais clara, como no Spotify.
+        if (!isBreak && translation != null) {
+            Text(
+                text = translation,
+                color = Color.White.copy(alpha = 0.62f),
+                fontSize = 18.sp,
+                lineHeight = 23.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 3.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlainLyrics(text: String, translations: List<String?>?, onPick: (PickedLine) -> Unit) {
+    val lines = remember(text) { text.lines() }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 20.dp)) {
+        Text("Letra sem marcação de tempo para esta música.", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
-        Text(text, color = Color.White.copy(alpha = 0.9f), fontSize = 22.sp, lineHeight = 31.sp, fontWeight = FontWeight.SemiBold)
+        lines.forEachIndexed { i, line ->
+            if (line.isBlank()) Spacer(Modifier.height(16.dp))
+            else Column(
+                Modifier.fillMaxWidth()
+                    .combinedClickable(onClick = {}, onLongClick = { onPick(PickedLine(line, translations?.getOrNull(i), 0)) })
+                    .padding(vertical = 3.dp)
+            ) {
+                Text(line, color = Color.White.copy(alpha = 0.9f), fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold)
+                translations?.getOrNull(i)?.let { Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp, lineHeight = 21.sp) }
+            }
+        }
         Spacer(Modifier.height(80.dp))
     }
 }
@@ -501,7 +606,15 @@ private fun OffsetTuner(offsetMs: Long, onNudge: (Long) -> Unit) {
 }
 
 @Composable
-private fun PlayerControls(now: NowPlaying, onTogglePlay: () -> Unit, onNext: () -> Unit, onPrevious: () -> Unit) {
+private fun PlayerControls(
+    now: NowPlaying,
+    playerOnly: Boolean,
+    onTogglePlayerOnly: () -> Unit,
+    onShare: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+) {
     val duration = now.track?.durationMs ?: 1L
     var pos by remember { mutableLongStateOf(now.positionAt(SystemClock.elapsedRealtime())) }
     val currentNow by rememberUpdatedState(now)
@@ -527,23 +640,35 @@ private fun PlayerControls(now: NowPlaying, onTogglePlay: () -> Unit, onNext: ()
         }
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Rounded.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(36.dp))
+            IconButton(onClick = onTogglePlayerOnly) {
+                Icon(
+                    if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
+                    contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
+                    tint = Color.White.copy(alpha = 0.85f),
+                )
             }
-            Spacer(Modifier.width(18.dp))
-            FilledIconButton(
-                onClick = onTogglePlay,
-                modifier = Modifier.size(64.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black),
-            ) {
-                Icon(if (now.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (now.isPlaying) "Pausar" else "Tocar", modifier = Modifier.size(36.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
+                    Icon(Icons.Rounded.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(36.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                FilledIconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier.size(64.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black),
+                ) {
+                    Icon(if (now.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (now.isPlaying) "Pausar" else "Tocar", modifier = Modifier.size(36.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
+                    Icon(Icons.Rounded.SkipNext, "Próxima", tint = Color.White, modifier = Modifier.size(36.dp))
+                }
             }
-            Spacer(Modifier.width(18.dp))
-            IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Rounded.SkipNext, "Próxima", tint = Color.White, modifier = Modifier.size(36.dp))
+            IconButton(onClick = onShare) {
+                Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar vídeo", tint = Color.White.copy(alpha = 0.85f))
             }
         }
     }

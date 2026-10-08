@@ -2,6 +2,7 @@ package com.dmwnezes.sintonia
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +11,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Person
@@ -23,9 +25,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,11 +41,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.dmwnezes.sintonia.history.HistoryViewModel
+import com.dmwnezes.sintonia.live.LiveLyricsService
 import com.dmwnezes.sintonia.ui.AppBackground
 import com.dmwnezes.sintonia.ui.HistoryScreen
 import com.dmwnezes.sintonia.ui.LoginScreen
 import com.dmwnezes.sintonia.ui.LyricsScreen
+import com.dmwnezes.sintonia.ui.NotebookScreen
 import com.dmwnezes.sintonia.ui.ProfileScreen
+import com.dmwnezes.sintonia.ui.QuizDialog
+import com.dmwnezes.sintonia.ui.SettingsDialog
+import com.dmwnezes.sintonia.wrapped.WrappedDialog
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 
@@ -55,10 +64,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         intent?.data?.let(vm::handleCallback)
 
-        // Só consulta o Spotify enquanto o app está aberto na tela.
+        // Só consulta o Spotify enquanto o app está aberto na tela (ou o serviço da tela de bloqueio está ligado).
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.startPolling()
+                val prefs = AppGraph.prefs
+                if (prefs.liveLyrics && prefs.isLoggedIn && !LiveLyricsService.running) {
+                    runCatching { LiveLyricsService.start(this@MainActivity) }
+                }
                 try { awaitCancellation() } finally { vm.stopPolling() }
             }
         }
@@ -92,13 +105,16 @@ class MainActivity : ComponentActivity() {
         CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this, vm.loginUri())
     }
 
-    @androidx.compose.runtime.Composable
+    @Composable
     private fun MainTabs() {
         val state by vm.ui.collectAsStateWithLifecycle()
         val profile by vm.profile.collectAsStateWithLifecycle()
         val range by vm.profileRange.collectAsStateWithLifecycle()
         val history by historyVm.ui.collectAsStateWithLifecycle()
         var tab by rememberSaveable { mutableIntStateOf(0) }
+        var showSettings by remember { mutableStateOf(false) }
+        var showQuiz by remember { mutableStateOf(false) }
+        var wrappedKey by remember { mutableStateOf<String?>(null) }
         val snackbar = remember { SnackbarHostState() }
 
         LaunchedEffect(state.message) {
@@ -126,18 +142,17 @@ class MainActivity : ComponentActivity() {
                         unselectedIconColor = Color.White.copy(alpha = 0.6f),
                         unselectedTextColor = Color.White.copy(alpha = 0.6f),
                     )
-                    NavigationBarItem(
-                        selected = tab == 0, onClick = { tab = 0 },
-                        icon = { Icon(Icons.Rounded.Lyrics, null) }, label = { Text("Letras") }, colors = itemColors,
-                    )
-                    NavigationBarItem(
-                        selected = tab == 1, onClick = { tab = 1 },
-                        icon = { Icon(Icons.Rounded.Person, null) }, label = { Text("Perfil") }, colors = itemColors,
-                    )
-                    NavigationBarItem(
-                        selected = tab == 2, onClick = { tab = 2 },
-                        icon = { Icon(Icons.Rounded.History, null) }, label = { Text("Histórico") }, colors = itemColors,
-                    )
+                    listOf(
+                        Triple("Letras", Icons.Rounded.Lyrics, 0),
+                        Triple("Perfil", Icons.Rounded.Person, 1),
+                        Triple("Histórico", Icons.Rounded.History, 2),
+                        Triple("Caderno", Icons.Rounded.AutoStories, 3),
+                    ).forEach { (label, icon, i) ->
+                        NavigationBarItem(
+                            selected = tab == i, onClick = { tab = i },
+                            icon = { Icon(icon, null) }, label = { Text(label) }, colors = itemColors,
+                        )
+                    }
                 }
             },
         ) { padding ->
@@ -150,9 +165,25 @@ class MainActivity : ComponentActivity() {
                         onPrevious = vm::previous,
                         onSeek = vm::seek,
                         onSetRealViz = vm::setRealAudioViz,
+                        onSetVizTheme = vm::setVizTheme,
                         onNudgeOffset = vm::nudgeOffset,
                         onSetPlayerOnly = vm::setPlayerOnly,
+                        onSetShowTranslation = vm::setShowTranslation,
                         onRetryLyrics = vm::retryLyrics,
+                        bottomPadding = padding,
+                    )
+                    1 -> ProfileScreen(
+                        state = profile,
+                        range = range,
+                        accent = state.colors.glow1,
+                        onRange = { vm.loadProfile(it) },
+                        onRefresh = { vm.loadProfile(range, force = true) },
+                        onLogout = {
+                            LiveLyricsService.stop(this@MainActivity)
+                            vm.logout()
+                        },
+                        onOpenSettings = { showSettings = true },
+                        onOpenQuiz = { showQuiz = true },
                         bottomPadding = padding,
                     )
                     2 -> HistoryScreen(
@@ -163,20 +194,33 @@ class MainActivity : ComponentActivity() {
                         summaryText = historyVm::summaryText,
                         onSaveBackup = historyVm::saveBackup,
                         onClear = historyVm::clear,
+                        onWrapped = { wrappedKey = it },
                         bottomPadding = padding,
                     )
-                    else -> ProfileScreen(
-                        state = profile,
-                        range = range,
+                    else -> NotebookScreen(
+                        currentTrack = state.now?.track,
+                        positionMs = { state.now?.positionAt(SystemClock.elapsedRealtime()) ?: 0L },
                         accent = state.colors.glow1,
-                        onRange = { vm.loadProfile(it) },
-                        onRefresh = { vm.loadProfile(range, force = true) },
-                        onLogout = vm::logout,
                         bottomPadding = padding,
                     )
                 }
             }
         }
+
+        if (showSettings) {
+            SettingsDialog(
+                state = state,
+                onLiveLyrics = vm::setLiveLyrics,
+                onTranslation = vm::setShowTranslation,
+                onTheme = vm::setVizTheme,
+                onDismiss = { showSettings = false },
+            )
+        }
+        if (showQuiz) {
+            QuizDialog(accent = state.colors.glow1, onPlay = vm::playTrack, onDismiss = { showQuiz = false })
+        }
+        wrappedKey?.let { key ->
+            history.stats?.let { stats -> WrappedDialog(stats, key) { wrappedKey = null } }
+        }
     }
 }
-

@@ -81,6 +81,7 @@ fun HistoryScreen(
     summaryText: () -> String?,
     onSaveBackup: (android.net.Uri) -> Unit,
     onClear: () -> Unit,
+    onWrapped: (String) -> Unit,
     bottomPadding: PaddingValues,
 ) {
     val context = LocalContext.current
@@ -130,7 +131,7 @@ fun HistoryScreen(
             !ui.loaded -> item { Loading() }
             ui.importing -> item { Importing(ui.importedCount) }
             stats?.all == null -> item { EmptyHistory(openPicker) }
-            else -> historyContent(stats, ui.selected, accent, onSelect) { confirmClear = true }
+            else -> historyContent(stats, ui.selected, accent, onSelect, onWrapped) { confirmClear = true }
         }
     }
 
@@ -240,6 +241,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
     selected: String,
     accent: Color,
     onSelect: (String) -> Unit,
+    onWrapped: (String) -> Unit,
     onClear: () -> Unit,
 ) {
     val p = stats.periods[selected] ?: stats.all!!
@@ -268,6 +270,16 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
         Section("Retrospectiva")
         Panel(Modifier.padding(horizontal = 20.dp)) {
             Text(Retrospective.forPeriod(stats, p.key), color = Color.White.copy(alpha = 0.92f), fontSize = 15.sp, lineHeight = 22.sp)
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = { onWrapped(p.key) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.Black),
+            ) {
+                Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (isAll) "Ver retrospectiva animada" else "Ver retrospectiva de ${p.key}", fontWeight = FontWeight.Bold)
+            }
         }
     }
 

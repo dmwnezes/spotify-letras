@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -126,6 +127,12 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
     suspend fun next() { call("POST", "/me/player/next") }
     suspend fun previous() { call("POST", "/me/player/previous") }
     suspend fun seek(ms: Long) { call("PUT", "/me/player/seek?position_ms=$ms") }
+
+    /** Toca uma faixa específica no aparelho ativo do Spotify. */
+    suspend fun playTrack(id: String) {
+        val body = JSONObject().put("uris", JSONArray().put("spotify:track:$id")).toString()
+        call("PUT", "/me/player/play", body.toRequestBody("application/json".toMediaType()))
+    }
 
     // ---------- Perfil ----------
 

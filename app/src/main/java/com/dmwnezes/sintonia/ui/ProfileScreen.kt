@@ -1,6 +1,7 @@
 package com.dmwnezes.sintonia.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Quiz
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -58,6 +62,8 @@ fun ProfileScreen(
     onRange: (TimeRange) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenQuiz: () -> Unit,
     bottomPadding: PaddingValues,
 ) {
     LaunchedEffect(Unit) { onRange(range) }
@@ -81,6 +87,7 @@ fun ProfileScreen(
                     user?.name?.let { Text(it, color = Color.White.copy(alpha = 0.65f), fontSize = 14.sp) }
                 }
                 IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Atualizar", tint = Color.White) }
+                IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Ajustes", tint = Color.White) }
                 IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Rounded.Logout, "Sair", tint = Color.White.copy(alpha = 0.7f)) }
             }
         }
@@ -118,6 +125,7 @@ fun ProfileScreen(
             is ProfileState.Ready -> {
                 val d = state.data
                 item { Highlights(d, range, accent) }
+                item { QuizCard(accent, onOpenQuiz) }
                 if (d.topArtists.isNotEmpty()) {
                     item { SectionTitle("Artistas no topo") }
                     item {
@@ -147,6 +155,30 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun QuizCard(accent: Color, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .padding(start = 20.dp, end = 20.dp, top = 14.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(46.dp).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Quiz, null, tint = Color.Black)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Quiz: adivinhe a música", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Trechos das letras das músicas que você mais ouve", color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.6f))
     }
 }
 

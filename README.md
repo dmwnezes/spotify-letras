@@ -2,10 +2,14 @@
 
 App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
 
-- **Letras:** letra sincronizada ou modo só player (capa grande), visualizer e controles.
+- **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
+- **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha (feita no celular, grátis).
+- **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
+- **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
 - **Compartilhar:** gera um vídeo (Stories 9:16 ou quadrado) com capa e letra de um trecho de até 30 s.
 - **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
-- **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas e uma retrospectiva. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
+- **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas, uma retrospectiva em texto e outra animada estilo Stories. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
+- **Quiz:** adivinhe a música por um trecho da letra, usando as músicas que você mais ouve.
 
 ## Instalar no celular
 
@@ -45,8 +49,15 @@ Tudo é calculado no celular. O backup exportado pode ser aberto de novo pelo me
 
 ```
 app/src/main/java/com/dmwnezes/sintonia/
-├── MainActivity.kt        abas Letras / Perfil Musical
-├── AppViewModel.kt        estado do app, consultas e controles
+├── MainActivity.kt        abas Letras / Perfil / Histórico / Caderno
+├── AppGraph.kt            peças compartilhadas (login, Spotify, letras)
+├── Playback.kt            o que está tocando, letra, cores e tradução
+├── AppViewModel.kt        estado das telas e preferências
+├── live/                  notificação da tela de bloqueio e widget
+├── translate/             tradução no celular (ML Kit)
+├── notebook/              caderno (trechos e diário) e imagem do trecho
+├── wrapped/               retrospectiva animada
+├── quiz/                  quiz da letra
 ├── data/                  login (PKCE) e Web API do Spotify
 ├── lyrics/                LRCLIB e leitura do formato LRC
 ├── history/               leitura e estatísticas do histórico do Spotify

@@ -5,6 +5,10 @@
     <!-- O visualizer lê o som que sai do celular. O Android chama isso de "gravar áudio". -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Letra ao vivo na tela de bloqueio e no widget -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
         <package android:name="com.spotify.music" />
@@ -14,6 +18,7 @@
     </queries>
 
     <application
+        android:name=".SintoniaApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -38,6 +43,27 @@
                 <data android:scheme="sintonia" android:host="callback" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".live.LiveLyricsService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Mostra na tela de bloqueio e no widget a linha da letra da música que está tocando no Spotify" />
+        </service>
+
+        <receiver
+            android:name=".live.LyricsWidget"
+            android:exported="false"
+            android:label="Letra ao vivo">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
 
         <!-- Entrega o vídeo gerado para outros apps (Instagram, WhatsApp…) -->
         <provider

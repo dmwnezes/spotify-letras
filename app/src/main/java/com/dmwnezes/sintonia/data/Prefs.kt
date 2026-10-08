@@ -40,6 +40,24 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("player_only", false)
         set(v) = sp.edit().putBoolean("player_only", v).apply()
 
+    /** Mostrar a tradução abaixo de cada linha quando a letra está em outro idioma. */
+    var showTranslation: Boolean
+        get() = sp.getBoolean("show_translation", true)
+        set(v) = sp.edit().putBoolean("show_translation", v).apply()
+
+    /** Letra ao vivo na tela de bloqueio e no widget (serviço em primeiro plano). */
+    var liveLyrics: Boolean
+        get() = sp.getBoolean("live_lyrics", false)
+        set(v) = sp.edit().putBoolean("live_lyrics", v).apply()
+
+    var vizTheme: String
+        get() = sp.getString("viz_theme", "BRILHOS") ?: "BRILHOS"
+        set(v) = sp.edit().putString("viz_theme", v).apply()
+
+    var quizBest: Int
+        get() = sp.getInt("quiz_best", 0)
+        set(v) = sp.edit().putInt("quiz_best", v).apply()
+
     /** Ajuste fino da sincronia da letra, em milissegundos. */
     var lyricsOffsetMs: Long
         get() = sp.getLong("lyrics_offset", 0L)
