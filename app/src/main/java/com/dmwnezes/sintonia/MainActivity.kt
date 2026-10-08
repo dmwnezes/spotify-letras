@@ -50,6 +50,7 @@ import com.dmwnezes.sintonia.ui.NotebookScreen
 import com.dmwnezes.sintonia.ui.ProfileScreen
 import com.dmwnezes.sintonia.ui.QuizDialog
 import com.dmwnezes.sintonia.ui.SettingsDialog
+import com.dmwnezes.sintonia.ui.SplashCredits
 import com.dmwnezes.sintonia.wrapped.WrappedDialog
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -79,8 +80,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Color.White, background = Color.Black)) {
                 val state by vm.ui.collectAsStateWithLifecycle()
+                var splash by rememberSaveable { mutableStateOf(true) }
                 AppBackground(state.colors) {
-                    if (!state.loggedIn) {
+                    if (splash) {
+                        SplashCredits(onDone = { splash = false })
+                    } else if (!state.loggedIn) {
                         LoginScreen(
                             clientId = state.clientId,
                             loggingIn = state.loggingIn,

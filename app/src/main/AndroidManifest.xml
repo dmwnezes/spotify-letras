@@ -12,6 +12,7 @@
 
     <queries>
         <package android:name="com.spotify.music" />
+        <package android:name="com.instagram.android" />
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>

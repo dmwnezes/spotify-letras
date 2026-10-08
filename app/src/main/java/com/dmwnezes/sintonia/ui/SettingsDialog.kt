@@ -91,6 +91,8 @@ fun SettingsDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     VizTheme.entries.drop(2).forEach { t -> FilterChip(selected = t == state.vizTheme, onClick = { onTheme(t) }, label = { Text(t.label) }) }
                 }
+                HorizontalDivider(Modifier.padding(vertical = 14.dp))
+                CreatorCredit()
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar") } },

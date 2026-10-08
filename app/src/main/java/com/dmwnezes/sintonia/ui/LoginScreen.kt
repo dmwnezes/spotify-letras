@@ -132,5 +132,7 @@ fun LoginScreen(
             Spacer(Modifier.height(16.dp))
             Text(error, color = Color(0xFFFFB4B4), fontSize = 14.sp)
         }
+        Spacer(Modifier.height(40.dp))
+        CreatorCredit(Modifier.align(Alignment.CenterHorizontally))
     }
 }

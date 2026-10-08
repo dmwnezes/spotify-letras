@@ -97,4 +97,12 @@ class ScreensRenderTest {
         }
         save("letras-traducao")
     }
+
+    @Test
+    fun splash() {
+        rule.mainClock.autoAdvance = false
+        rule.setContent { com.dmwnezes.sintonia.ui.SplashCredits(onDone = {}) }
+        rule.mainClock.advanceTimeBy(900)
+        save("abertura")
+    }
 }
