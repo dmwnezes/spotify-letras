@@ -3,6 +3,7 @@
 App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
 
 - **Descobrir:** mix do dia com 30 músicas novas a partir do que você ouve, cartões para deslizar com prévia de 30 s, curtidas que vão para a playlist "Sintonia · Descobertas" no Spotify, e recomendações que aprendem com o que você curte ou pula.
+- **Estilo Edit:** a letra aparece como os "lyric edits" de reels: fundo preto, texto creme com brilho, palavras surgindo no tempo em blocos de 2–3, curvatura, rasgos de fita VHS e granulado. Dá para voltar ao estilo Clássico no menu ⋮.
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
 - **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
 - **Busca:** procure qualquer música e toque na hora ou coloque na fila.
@@ -59,6 +60,7 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── AppGraph.kt            peças compartilhadas (login, Spotify, letras)
 ├── Playback.kt            o que está tocando, letra, cores e tradução
 ├── AppViewModel.kt        estado das telas e preferências
+├── edit/                  estilo Edit (blocos de palavras e desenho com brilho/VHS)
 ├── reco/                  recomendações (Deezer, pontuação, aprendizado, prévias)
 ├── live/                  notificação da tela de bloqueio e widget
 ├── translate/             tradução no celular (ML Kit)

@@ -104,6 +104,8 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
+import com.dmwnezes.sintonia.edit.EditLyricsView
+import androidx.compose.runtime.CompositionLocalProvider
 import com.dmwnezes.sintonia.lyrics.WordTiming
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -137,6 +139,7 @@ fun LyricsScreen(
     bottomPadding: PaddingValues,
     onSetKaraoke: (Boolean) -> Unit = {},
     onOpenSearch: () -> Unit = {},
+    onSetEditStyle: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -178,15 +181,29 @@ fun LyricsScreen(
     val translations: List<String?>? =
         (state.translation as? TranslationState.Ready)?.lines?.takeIf { state.showTranslation }
 
+    // Estilo "Edit": a letra sincronizada vira o vídeo de lyric edit, em tela cheia e sempre escura.
+    val editLines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines
+        ?.takeIf { state.editStyle && !state.playerOnly && state.now?.track != null }
+    val nowForEdit by rememberUpdatedState(state.now)
+    val offsetForEdit by rememberUpdatedState(state.lyricsOffsetMs)
+
+    CompositionLocalProvider(LocalAppPalette provides if (editLines != null) DarkPalette else LocalAppPalette.current) {
     Box(Modifier.fillMaxSize()) {
-        VisualizerCanvas(
-            colors = state.colors,
-            playing = playing,
-            theme = state.vizTheme,
-            source = { if (useReal && !vizUnavailable) spectrum.levels else null },
-        )
-        // Véu escuro para a letra ficar legível sobre os brilhos.
-        Box(Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = if (Palette.dark) 0.28f else 0.42f)))
+        if (editLines != null) {
+            EditLyricsView(
+                lines = editLines,
+                positionMs = { (nowForEdit?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offsetForEdit + 120 },
+            )
+        } else {
+            VisualizerCanvas(
+                colors = state.colors,
+                playing = playing,
+                theme = state.vizTheme,
+                source = { if (useReal && !vizUnavailable) spectrum.levels else null },
+            )
+            // Véu escuro para a letra ficar legível sobre os brilhos.
+            Box(Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = if (Palette.dark) 0.28f else 0.42f)))
+        }
 
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(bottom = bottomPadding.calculateBottomPadding())) {
             val now = state.now
@@ -238,12 +255,14 @@ fun LyricsScreen(
                         onSetTheme = onSetVizTheme,
                         karaoke = state.karaoke,
                         onSetKaraoke = onSetKaraoke,
+                        editStyle = state.editStyle,
+                        onSetEditStyle = onSetEditStyle,
                         onTune = { showTune = !showTune },
                         onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
                         onSearch = onOpenSearch,
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
+                        if (editLines == null) Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
                             if (onlyPlayer) BigCover(now)
                             else LyricsBody(state.lyrics, translations, now, state.lyricsOffsetMs, state.karaoke, onSeek, onRetryLyrics) { picked = it }
                         }
@@ -275,6 +294,8 @@ fun LyricsScreen(
             }
         }
     }
+
+    } // CompositionLocalProvider
 
     if (showMicDialog) {
         AlertDialog(
@@ -348,6 +369,8 @@ private fun TrackHeader(
     onSetTheme: (VizTheme) -> Unit,
     karaoke: Boolean,
     onSetKaraoke: (Boolean) -> Unit,
+    editStyle: Boolean,
+    onSetEditStyle: (Boolean) -> Unit,
     onTune: () -> Unit,
     onNote: () -> Unit,
     onSearch: () -> Unit,
@@ -399,6 +422,10 @@ private fun TrackHeader(
                     if (!playerOnly) {
                         DropdownMenuItem(text = { Text("Ajustar sincronia da letra") }, onClick = { menu = false; onTune() })
                         MenuCheck("Acender palavra por palavra", karaoke) { onSetKaraoke(!karaoke); menu = false }
+                        HorizontalDivider()
+                        Text("Estilo da letra", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                        MenuCheck("Edit (estilo reel)", editStyle) { onSetEditStyle(true); menu = false }
+                        MenuCheck("Clássico", !editStyle) { onSetEditStyle(false); menu = false }
                     }
                     HorizontalDivider()
                     Text("Visualizer", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))

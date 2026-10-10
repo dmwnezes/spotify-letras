@@ -55,6 +55,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("karaoke", true)
         set(v) = sp.edit().putBoolean("karaoke", v).apply()
 
+    /** Estilo da letra: "EDIT" (estilo reel) ou "CLASSICO". */
+    var lyricsMode: String
+        get() = sp.getString("lyrics_mode", "EDIT") ?: "EDIT"
+        set(v) = sp.edit().putString("lyrics_mode", v).apply()
+
     var themeMode: String
         get() = sp.getString("theme_mode", "AUTO") ?: "AUTO"
         set(v) = sp.edit().putString("theme_mode", v).apply()

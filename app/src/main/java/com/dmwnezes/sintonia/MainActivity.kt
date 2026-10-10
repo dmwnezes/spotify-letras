@@ -239,6 +239,7 @@ class MainActivity : ComponentActivity() {
                         onSetShowTranslation = vm::setShowTranslation,
                         onSetKaraoke = vm::setKaraoke,
                         onOpenSearch = { showSearch = true },
+                        onSetEditStyle = vm::setEditStyle,
                         onRetryLyrics = vm::retryLyrics,
                         bottomPadding = padding,
                     )
@@ -292,6 +293,7 @@ class MainActivity : ComponentActivity() {
                 onCheckUpdates = { showSettings = false; showUpdate = true },
                 onThemeMode = vm::setThemeMode,
                 onLyricsStyle = vm::setLyricsStyle,
+                onEditStyle = vm::setEditStyle,
                 onDismiss = { showSettings = false },
             )
         }

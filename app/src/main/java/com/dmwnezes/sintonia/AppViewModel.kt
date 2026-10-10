@@ -45,6 +45,7 @@ data class UiState(
     val playerOnly: Boolean = false,
     val showTranslation: Boolean = true,
     val karaoke: Boolean = true,
+    val editStyle: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val lyricsStyle: LyricsStyle = LyricsStyle(),
     val liveLyrics: Boolean = false,
@@ -86,6 +87,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         playerOnly = prefs.playerOnly,
         showTranslation = prefs.showTranslation,
         karaoke = prefs.karaoke,
+        editStyle = prefs.lyricsMode == "EDIT",
         themeMode = ThemeMode.from(prefs.themeMode),
         lyricsStyle = LyricsStyle(LyricsFont.from(prefs.lyricsFont), prefs.lyricsScale),
         liveLyrics = prefs.liveLyrics,
@@ -192,6 +194,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         prefs.lyricsFont = st.font.name
         prefs.lyricsScale = st.scale
         _local.update { it.copy(lyricsStyle = st) }
+    }
+
+    fun setEditStyle(on: Boolean) {
+        prefs.lyricsMode = if (on) "EDIT" else "CLASSICO"
+        _local.update { it.copy(editStyle = on) }
     }
 
     fun setKaraoke(on: Boolean) {

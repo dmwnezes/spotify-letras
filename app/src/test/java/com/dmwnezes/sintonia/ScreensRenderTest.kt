@@ -75,7 +75,10 @@ class ScreensRenderTest {
     @Test
     fun lyricsWithTranslation() = lyrics(light = false, name = "letras-traducao")
 
-    private fun lyrics(light: Boolean, name: String) {
+    @Test
+    fun lyricsEditStyle() = lyrics(light = true, name = "letras-edit", edit = true)
+
+    private fun lyrics(light: Boolean, name: String, edit: Boolean = false) {
         rule.mainClock.autoAdvance = false
         val lines = listOf(
             LyricLine(0, "I've been waiting for a long time"),
@@ -91,7 +94,7 @@ class ScreensRenderTest {
             now = NowPlaying(track, true, 6200, SystemClock.elapsedRealtime()),
             lyrics = LyricsState.Ready(Lyrics.Synced(lines)),
             translation = TranslationState.Ready("inglês", tr),
-            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true,
+            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true, editStyle = edit,
         )
         rule.setContent {
             androidx.compose.runtime.CompositionLocalProvider(

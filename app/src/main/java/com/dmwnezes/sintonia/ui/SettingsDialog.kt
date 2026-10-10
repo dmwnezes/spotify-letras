@@ -44,6 +44,7 @@ fun SettingsDialog(
     onCheckUpdates: () -> Unit,
     onThemeMode: (ThemeMode) -> Unit = {},
     onLyricsStyle: (LyricsStyle) -> Unit = {},
+    onEditStyle: (Boolean) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -64,7 +65,12 @@ fun SettingsDialog(
                     ThemeMode.entries.forEach { m -> FilterChip(selected = m == state.themeMode, onClick = { onThemeMode(m) }, label = { Text(m.label) }) }
                 }
                 Spacer(Modifier.height(10.dp))
-                Text("Fonte da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f))
+                Text("Estilo da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = state.editStyle, onClick = { onEditStyle(true) }, label = { Text("Edit (estilo reel)") })
+                    FilterChip(selected = !state.editStyle, onClick = { onEditStyle(false) }, label = { Text("Clássico") })
+                }
+                Text("Fonte da letra (estilo Clássico)", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f), modifier = Modifier.padding(top = 6.dp))
                 val st = state.lyricsStyle
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LyricsFont.entries.take(2).forEach { f ->
