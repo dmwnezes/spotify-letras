@@ -65,6 +65,7 @@ import com.dmwnezes.sintonia.ui.QuizDialog
 import com.dmwnezes.sintonia.ui.SettingsDialog
 import com.dmwnezes.sintonia.ui.SearchDialog
 import com.dmwnezes.sintonia.ui.SplashCredits
+import com.dmwnezes.sintonia.ui.RecordModeScreen
 import com.dmwnezes.sintonia.update.Release
 import com.dmwnezes.sintonia.update.UpdateDialog
 import com.dmwnezes.sintonia.update.Updater
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
     private val historyVm: HistoryViewModel by viewModels()
     private val discoverVm: DiscoverViewModel by viewModels()
+    private val recordMode = androidx.compose.runtime.mutableStateOf(false)
 
     /** Pedido vindo de um atalho do ícone: "letra", "buscar", "caderno" ou "quiz". */
     private val pendingOpen = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -120,7 +122,14 @@ class MainActivity : ComponentActivity() {
             ) { MaterialTheme(colorScheme = scheme) {
                 var splash by rememberSaveable { mutableStateOf(true) }
                 AppBackground(state.colors) {
-                    if (splash) {
+                    if (recordMode.value && state.loggedIn) {
+                        RecordModeScreen(
+                            state = state,
+                            onRestartSong = vm::restartAndPlay,
+                            onEnsurePlaying = vm::ensurePlaying,
+                            onExit = { recordMode.value = false },
+                        )
+                    } else if (splash) {
                         SplashCredits(onDone = { splash = false })
                     } else if (!state.loggedIn) {
                         LoginScreen(
@@ -240,6 +249,7 @@ class MainActivity : ComponentActivity() {
                         onSetKaraoke = vm::setKaraoke,
                         onOpenSearch = { showSearch = true },
                         onSetEditStyle = vm::setEditStyle,
+                        onRecordMode = { recordMode.value = true },
                         onRetryLyrics = vm::retryLyrics,
                         bottomPadding = padding,
                     )

@@ -19,6 +19,11 @@ import kotlin.math.sin
  */
 class EditRenderer(typeface: Typeface, private val density: Float) {
 
+    /** Altura (0–1) onde fica o centro do bloco de letra. No modo gravar ele desce para dar lugar à capa. */
+    var centerFraction = 0.42f
+    /** Largura máxima do texto (0–1 da tela). */
+    var maxWidthFraction = 0.84f
+
     companion object {
         val BG = Color.rgb(6, 5, 5)
         val CREAM = Color.rgb(242, 226, 202)
@@ -50,7 +55,7 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
 
     private fun drawVignette(c: Canvas, w: Float, h: Float) {
         if (vignetteFor != w * 31 + h) {
-            vignette.shader = RadialGradient(w / 2, h * 0.45f, maxOf(w, h) * 0.75f,
+            vignette.shader = RadialGradient(w / 2, h * centerFraction, maxOf(w, h) * 0.75f,
                 intArrayOf(Color.argb(0, 0, 0, 0), Color.argb(0, 0, 0, 0), Color.argb(170, 0, 0, 0)),
                 floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
             vignetteFor = w * 31 + h
@@ -60,10 +65,10 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
 
     private fun drawPage(c: Canvas, w: Float, h: Float, page: EditPage, posMs: Long, t: Float) {
         // Tamanho: grande, mas cada pedaço cabe em ~84% da largura.
-        var size = min(w * 0.136f, h * 0.12f)
+        var size = min(w * 0.136f, h * 0.12f) * (maxWidthFraction / 0.84f).coerceAtMost(1f)
         text.textSize = size
         val widest = page.chunks.maxOf { text.measureText(it.text) }
-        if (widest > w * 0.84f) size *= (w * 0.84f) / widest
+        if (widest > w * maxWidthFraction) size *= (w * maxWidthFraction) / widest
         text.textSize = size
         text.setShadowLayer(size * 0.30f, 0f, 0f, Color.argb(185, 255, 204, 145))
 
@@ -75,9 +80,9 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
         // Movimento suave do bloco inteiro.
         c.translate(sin(t * 0.37f) * w * 0.012f, sin(t * 0.29f + 1f) * h * 0.006f)
         val zoom = 1f + 0.012f * sin(t * 0.5f)
-        c.scale(zoom, zoom, w / 2, h * 0.45f)
+        c.scale(zoom, zoom, w / 2, h * centerFraction)
 
-        val top = h * 0.42f - blockH / 2
+        val top = h * centerFraction - blockH / 2
         val tear = tearAt(t, page, top, lh, w)
         val baselines = page.chunks.indices.map { top + lh * (it + 0.78f) }
 

@@ -158,6 +158,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun seek(ms: Long) = playback.seek(ms)
     fun retryLyrics() = playback.retryLyrics()
     fun playTrack(id: String) = playback.playTrack(id)
+    fun restartAndPlay() = playback.restartAndPlay()
+    fun ensurePlaying() = playback.ensurePlaying()
     fun queue(id: String, name: String) = playback.queue(id, name)
 
     fun clearMessage() = _local.update { it.copy(message = null) }

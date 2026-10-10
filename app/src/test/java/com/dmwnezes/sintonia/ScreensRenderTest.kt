@@ -119,4 +119,20 @@ class ScreensRenderTest {
         rule.mainClock.advanceTimeBy(900)
         save("abertura")
     }
+
+    @Test
+    fun recordMode() {
+        rule.mainClock.autoAdvance = false
+        val f = java.io.File(rule.activity.cacheDir, "capa.png")
+        val bmp = Bitmap.createBitmap(400, 400, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bmp).drawRect(0f, 0f, 400f, 400f, android.graphics.Paint().apply {
+            shader = android.graphics.LinearGradient(0f, 0f, 400f, 400f, 0xFFB0603C.toInt(), 0xFF1E2A50.toInt(), android.graphics.Shader.TileMode.CLAMP) })
+        f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val lines = listOf(LyricLine(0, "você sabe que não é o mesmo"), LyricLine(6000, "de antes"))
+        val track = Track("x", "Canção de Teste", listOf("Artista Exemplo"), "Álbum", f.toURI().toString(), 200_000)
+        val state = UiState(loggedIn = true, firstLoadDone = true, now = NowPlaying(track, true, 2400, SystemClock.elapsedRealtime()),
+            lyrics = LyricsState.Ready(Lyrics.Synced(lines)))
+        rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}, startLive = true) }
+        save("modo-gravar")
+    }
 }

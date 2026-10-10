@@ -254,6 +254,14 @@ class Playback(
 
     fun playTrack(id: String) = control { spotify.playTrack(id) }
 
+    /** Volta a música para o começo e garante que está tocando (modo gravar). */
+    fun restartAndPlay() = control {
+        spotify.seek(0)
+        if (_state.value.now?.isPlaying != true) spotify.play()
+    }
+
+    fun ensurePlaying() = control { if (_state.value.now?.isPlaying != true) spotify.play() }
+
     fun queue(id: String, name: String) {
         scope.launch {
             runCatching { spotify.queue(id) }

@@ -50,7 +50,7 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.dmwnezes.sintonia.share.NowPlayingCard
@@ -140,6 +140,7 @@ fun LyricsScreen(
     onSetKaraoke: (Boolean) -> Unit = {},
     onOpenSearch: () -> Unit = {},
     onSetEditStyle: (Boolean) -> Unit = {},
+    onRecordMode: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -213,20 +214,9 @@ fun LyricsScreen(
                 else -> {
                     val track = now.track
                     var showTune by rememberSaveable { mutableStateOf(false) }
-                    var showShare by remember { mutableStateOf(false) }
                     var picked by remember { mutableStateOf<PickedLine?>(null) }
                     var noteFor by remember { mutableStateOf<Long?>(null) }
 
-                    if (showShare) {
-                        val lines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines.orEmpty()
-                        ShareVideoDialog(
-                            track = track,
-                            lines = lines,
-                            positionMs = now.positionAt(SystemClock.elapsedRealtime()),
-                            colors = state.colors,
-                            onDismiss = { showShare = false },
-                        )
-                    }
                     picked?.let { p ->
                         LineActionsSheet(
                             track = track,
@@ -260,6 +250,7 @@ fun LyricsScreen(
                         onTune = { showTune = !showTune },
                         onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
                         onSearch = onOpenSearch,
+                        onRecordMode = onRecordMode,
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         if (editLines == null) Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
@@ -274,7 +265,7 @@ fun LyricsScreen(
                         now = now,
                         playerOnly = state.playerOnly,
                         onTogglePlayerOnly = { onSetPlayerOnly(!state.playerOnly) },
-                        onShareVideo = { showShare = true },
+                        onRecordMode = onRecordMode,
                         onShareCard = {
                             val pos = now.positionAt(SystemClock.elapsedRealtime())
                             val synced = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines.orEmpty()
@@ -374,6 +365,7 @@ private fun TrackHeader(
     onTune: () -> Unit,
     onNote: () -> Unit,
     onSearch: () -> Unit,
+    onRecordMode: () -> Unit,
 ) {
     val track = now.track ?: return
     var menu by remember { mutableStateOf(false) }
@@ -414,6 +406,11 @@ private fun TrackHeader(
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Mais opções", tint = Palette.ink) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Modo gravar para Stories") },
+                        leadingIcon = { Icon(Icons.Rounded.Videocam, null) },
+                        onClick = { menu = false; onRecordMode() },
+                    )
                     DropdownMenuItem(
                         text = { Text("Anotar um momento") },
                         leadingIcon = { Icon(Icons.Rounded.EditNote, null) },
@@ -709,7 +706,7 @@ private fun PlayerControls(
     now: NowPlaying,
     playerOnly: Boolean,
     onTogglePlayerOnly: () -> Unit,
-    onShareVideo: () -> Unit,
+    onRecordMode: () -> Unit,
     onShareCard: () -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
@@ -779,9 +776,9 @@ private fun PlayerControls(
                         onClick = { shareMenu = false; onShareCard() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Vídeo com a letra (até 30 s)") },
-                        leadingIcon = { Icon(Icons.Rounded.Movie, null) },
-                        onClick = { shareMenu = false; onShareVideo() },
+                        text = { Text("Modo gravar para Stories") },
+                        leadingIcon = { Icon(Icons.Rounded.Videocam, null) },
+                        onClick = { shareMenu = false; onRecordMode() },
                     )
                 }
             }

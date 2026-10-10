@@ -21,13 +21,21 @@ import com.dmwnezes.sintonia.lyrics.LyricLine
 
 /** A letra no estilo "lyric edit", ao vivo, acompanhando a música. */
 @Composable
-fun EditLyricsView(lines: List<LyricLine>, positionMs: () -> Long, modifier: Modifier = Modifier) {
+fun EditLyricsView(
+    lines: List<LyricLine>,
+    positionMs: () -> Long,
+    modifier: Modifier = Modifier,
+    centerFraction: Float = 0.42f,
+    maxWidthFraction: Float = 0.84f,
+) {
     val context = LocalContext.current
     val density = LocalDensity.current.density
     val renderer = remember(density) {
         val tf = ResourcesCompat.getFont(context, R.font.montserrat) ?: android.graphics.Typeface.DEFAULT_BOLD
         EditRenderer(tf, density)
     }
+    renderer.centerFraction = centerFraction
+    renderer.maxWidthFraction = maxWidthFraction
     val pages = remember(lines) { EditLayout.pages(lines) }
     val pos by rememberUpdatedState(positionMs)
     var t by remember { mutableFloatStateOf(0f) }

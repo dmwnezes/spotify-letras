@@ -12,7 +12,8 @@ App Android que mostra a letra da música que está tocando no Spotify, sincroni
 - **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha (feita no celular, grátis).
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
-- **Compartilhar:** cartão "tocando agora" para Stories, ou um vídeo (Stories 9:16 ou quadrado) com capa e letra de um trecho de até 30 s.
+- **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo Edit e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
+- **Compartilhar:** cartão "tocando agora" para Stories.
 - **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
 - **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas, uma retrospectiva em texto e outra animada estilo Stories. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
 - **Quiz:** adivinhe a música por um trecho da letra, usando as músicas que você mais ouve.
@@ -70,7 +71,7 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── data/                  login (PKCE) e Web API do Spotify
 ├── lyrics/                LRCLIB e leitura do formato LRC
 ├── history/               leitura e estatísticas do histórico do Spotify
-├── share/                 vídeo de compartilhamento (MediaCodec)
+├── share/                 cartão "tocando agora"
 ├── viz/AudioSpectrum.kt   leitura do espectro de áudio
 └── ui/                    telas e visualizer
 ```

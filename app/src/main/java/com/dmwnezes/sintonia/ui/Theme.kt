@@ -54,6 +54,9 @@ private val Playfair by lazy { variable(R.font.playfair, 400, 500, 600, 700, 800
 private val Nunito by lazy { variable(R.font.nunito, 400, 500, 600, 700, 800, 900) }
 private val Caveat by lazy { variable(R.font.caveat, 400, 500, 600, 700) }
 
+/** Fonte do estilo Edit (a mesma do texto da letra). */
+val Montserrat by lazy { variable(R.font.montserrat, 500, 600, 700, 800) }
+
 val LyricsFont.family: FontFamily
     get() = when (this) {
         LyricsFont.PADRAO -> FontFamily.Default
