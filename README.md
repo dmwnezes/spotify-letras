@@ -2,6 +2,7 @@
 
 App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
 
+- **Descobrir:** mix do dia com 30 músicas novas a partir do que você ouve, cartões para deslizar com prévia de 30 s, curtidas que vão para a playlist "Sintonia · Descobertas" no Spotify, e recomendações que aprendem com o que você curte ou pula.
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
 - **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
 - **Busca:** procure qualquer música e toque na hora ou coloque na fila.
@@ -36,6 +37,7 @@ Se o login der erro 403, abra **User Management** no painel do app e adicione o 
 
 ## Como funciona
 
+- **Recomendações:** artistas parecidos, rádios de artista e prévias vêm da API pública do [Deezer](https://developers.deezer.com/api) (sem chave); as músicas são achadas no Spotify pelo ISRC ou por título e artista, e tocam lá.
 - **Letras:** vêm do [LRCLIB](https://lrclib.net), base aberta e gratuita de letras sincronizadas.
 - **Música tocando:** o app consulta a Web API do Spotify a cada ~2 s e estima a posição entre uma consulta e outra.
 - **Visualizer:** usa o recurso do Android que lê o espectro do som que sai do celular. Por isso pede a permissão de "gravar áudio" — nada é gravado nem enviado. Se o aparelho bloquear, cai para uma animação nas cores da capa.
@@ -53,10 +55,11 @@ Tudo é calculado no celular. O backup exportado pode ser aberto de novo pelo me
 
 ```
 app/src/main/java/com/dmwnezes/sintonia/
-├── MainActivity.kt        abas Letras / Perfil / Histórico / Caderno
+├── MainActivity.kt        abas Letras / Descobrir / Perfil / Histórico / Caderno
 ├── AppGraph.kt            peças compartilhadas (login, Spotify, letras)
 ├── Playback.kt            o que está tocando, letra, cores e tradução
 ├── AppViewModel.kt        estado das telas e preferências
+├── reco/                  recomendações (Deezer, pontuação, aprendizado, prévias)
 ├── live/                  notificação da tela de bloqueio e widget
 ├── translate/             tradução no celular (ML Kit)
 ├── notebook/              caderno (trechos e diário) e imagem do trecho

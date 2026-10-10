@@ -20,6 +20,10 @@ class SpotifyException(val code: Int, message: String) : Exception(message)
 
 class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
 
+    companion object {
+        const val NEEDS_RELOGIN = "Para salvar playlists, entre de novo no Spotify e aceite a nova permissão."
+    }
+
     private val tokenLock = Mutex()
 
     // ---------- Login ----------
@@ -59,6 +63,7 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
             prefs.accessToken = json.getString("access_token")
             json.optString("refresh_token").takeIf { it.isNotBlank() }?.let { prefs.refreshToken = it }
             prefs.expiresAtMs = System.currentTimeMillis() + json.optLong("expires_in", 3600) * 1000
+            json.optString("scope").takeIf { it.isNotBlank() }?.let { prefs.grantedScopes = it }
         }
     }
 
@@ -96,7 +101,9 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
 
     private fun friendlyError(code: Int, text: String?): String {
         val reason = runCatching { JSONObject(text ?: "").getJSONObject("error").optString("reason") }.getOrNull()
+        val msg = runCatching { JSONObject(text ?: "").getJSONObject("error").optString("message") }.getOrNull().orEmpty()
         return when {
+            code == 403 && msg.contains("scope", ignoreCase = true) -> NEEDS_RELOGIN
             reason == "NO_ACTIVE_DEVICE" || code == 404 -> "Abra o Spotify e toque algo primeiro."
             reason == "PREMIUM_REQUIRED" -> "Esse controle exige Spotify Premium."
             code == 403 -> "O Spotify recusou o acesso. Confira se sua conta está em \"User Management\" no painel do app."
@@ -132,6 +139,68 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
     suspend fun playTrack(id: String) {
         val body = JSONObject().put("uris", JSONArray().put("spotify:track:$id")).toString()
         call("PUT", "/me/player/play", body.toRequestBody("application/json".toMediaType()))
+    }
+
+    /** Toca uma lista de faixas, em ordem, no aparelho ativo. */
+    suspend fun playTracks(ids: List<String>, offset: Int = 0) {
+        val body = JSONObject()
+            .put("uris", JSONArray(ids.take(100).map { "spotify:track:$it" }))
+            .put("offset", JSONObject().put("position", offset.coerceIn(0, (ids.size - 1).coerceAtLeast(0))))
+        call("PUT", "/me/player/play", body.toString().toRequestBody("application/json".toMediaType()))
+    }
+
+    /**
+     * Acha no Spotify a mesma música vista no Deezer: primeiro pelo ISRC (código único da gravação),
+     * depois por título + artista, conferindo se o artista bate.
+     */
+    suspend fun findTrack(title: String, artist: String, isrc: String?): String? {
+        fun norm(s: String) = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9]+"), " ").trim()
+        if (isrc != null) {
+            val r = runCatching { searchRaw("isrc:$isrc", 3) }.getOrNull().orEmpty()
+            r.firstOrNull()?.let { return it.id }
+        }
+        val mainArtist = artist.split(Regex(" e | & |, | feat\\.? | ft\\.? ", RegexOption.IGNORE_CASE)).first()
+        val cleanTitle = title.replace(Regex("\\s*[(\\[].*?[)\\]]"), "").trim()
+        for (q in listOf("track:\"$cleanTitle\" artist:\"$mainArtist\"", "$cleanTitle $mainArtist")) {
+            val r = runCatching { searchRaw(q, 8) }.getOrNull().orEmpty()
+            val a = norm(mainArtist)
+            val t = norm(cleanTitle)
+            r.firstOrNull { tr -> tr.artists.any { norm(it).contains(a) || a.contains(norm(it)) } && norm(tr.name).startsWith(t.take(12)) }
+                ?.let { return it.id }
+            r.firstOrNull { tr -> tr.artists.any { norm(it) == a } }?.let { return it.id }
+        }
+        return null
+    }
+
+    private suspend fun searchRaw(q: String, limit: Int): List<Track> {
+        val enc = java.net.URLEncoder.encode(q, "UTF-8")
+        val json = JSONObject(call("GET", "/search?type=track&limit=$limit&q=$enc") ?: "{}")
+        return json.optJSONObject("tracks")?.optJSONArray("items").objects().map(::parseTrack)
+    }
+
+    suspend fun myId(): String = JSONObject(call("GET", "/me") ?: "{}").optString("id")
+
+    /** A playlist ainda existe e é sua? (pode ter sido apagada no Spotify) */
+    suspend fun playlistExists(id: String): Boolean = try {
+        val o = JSONObject(call("GET", "/playlists/$id?fields=id,owner(id)") ?: "{}")
+        o.optString("id") == id
+    } catch (e: SpotifyException) {
+        if (e.code == 404) false else throw e
+    }
+
+    suspend fun createPlaylist(name: String, description: String): String {
+        val uid = myId()
+        val body = JSONObject().put("name", name).put("description", description).put("public", false)
+        val o = JSONObject(call("POST", "/users/$uid/playlists", body.toString().toRequestBody("application/json".toMediaType())) ?: "{}")
+        return o.getString("id")
+    }
+
+    suspend fun addToPlaylist(playlistId: String, ids: List<String>) {
+        ids.chunked(100).forEach { chunk ->
+            val body = JSONObject().put("uris", JSONArray(chunk.map { "spotify:track:$it" })).put("position", 0)
+            call("POST", "/playlists/$playlistId/tracks", body.toString().toRequestBody("application/json".toMediaType()))
+        }
     }
 
     /** Coloca uma faixa na fila do Spotify. */

@@ -19,7 +19,12 @@ object SpotifyAuth {
         "user-top-read",
         "user-read-recently-played",
         "user-read-private",
+        "playlist-modify-private",
+        "playlist-modify-public",
     )
+
+    /** O login atual permite criar playlists? (logins antigos não tinham essa permissão) */
+    fun canEditPlaylists(granted: String?): Boolean = granted?.contains("playlist-modify-private") == true
 
     fun randomString(bytes: Int = 64): String {
         val b = ByteArray(bytes)

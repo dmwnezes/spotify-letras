@@ -76,6 +76,21 @@ class Prefs(context: Context) {
         get() = sp.getString("skipped_update", null)
         set(v) = sp.edit().putString("skipped_update", v).apply()
 
+    /** Permissões que o Spotify concedeu no último login. */
+    var grantedScopes: String?
+        get() = sp.getString("granted_scopes", null)
+        set(v) = sp.edit().putString("granted_scopes", v).apply()
+
+    /** Playlist "Sintonia" no Spotify, onde vão as curtidas. */
+    var recoPlaylistId: String?
+        get() = sp.getString("reco_playlist", null)
+        set(v) = sp.edit().putString("reco_playlist", v).apply()
+
+    /** Mandar automaticamente cada curtida para a playlist. */
+    var autoPlaylist: Boolean
+        get() = sp.getBoolean("auto_playlist", true)
+        set(v) = sp.edit().putBoolean("auto_playlist", v).apply()
+
     var quizBest: Int
         get() = sp.getInt("quiz_best", 0)
         set(v) = sp.edit().putInt("quiz_best", v).apply()

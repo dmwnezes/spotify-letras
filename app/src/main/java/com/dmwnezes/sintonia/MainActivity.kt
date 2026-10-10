@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Explore
+import com.dmwnezes.sintonia.reco.DiscoverViewModel
+import com.dmwnezes.sintonia.ui.DiscoverScreen
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
@@ -73,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
     private val vm: AppViewModel by viewModels()
     private val historyVm: HistoryViewModel by viewModels()
+    private val discoverVm: DiscoverViewModel by viewModels()
 
     /** Pedido vindo de um atalho do ícone: "letra", "buscar", "caderno" ou "quiz". */
     private val pendingOpen = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -183,6 +187,9 @@ class MainActivity : ComponentActivity() {
                 vm.clearMessage()
             }
         }
+        LaunchedEffect(Unit) { discoverVm.messages.collect { snackbar.showSnackbar(it) } }
+        // Depois de entrar de novo no Spotify, confere se já pode criar playlists.
+        LaunchedEffect(state.loggingIn) { if (!state.loggingIn) discoverVm.refreshPermissions() }
         LaunchedEffect(history.message) {
             history.message?.let {
                 snackbar.showSnackbar(it)
@@ -204,6 +211,7 @@ class MainActivity : ComponentActivity() {
                     )
                     listOf(
                         Triple("Letras", Icons.Rounded.Lyrics, 0),
+                        Triple("Descobrir", Icons.Rounded.Explore, 4),
                         Triple("Perfil", Icons.Rounded.Person, 1),
                         Triple("Histórico", Icons.Rounded.History, 2),
                         Triple("Caderno", Icons.Rounded.AutoStories, 3),
@@ -257,6 +265,12 @@ class MainActivity : ComponentActivity() {
                         onSaveBackup = historyVm::saveBackup,
                         onClear = historyVm::clear,
                         onWrapped = { wrappedKey = it },
+                        bottomPadding = padding,
+                    )
+                    4 -> DiscoverScreen(
+                        vm = discoverVm,
+                        accent = state.colors.glow1,
+                        onRelogin = { openLogin() },
                         bottomPadding = padding,
                     )
                     else -> NotebookScreen(
