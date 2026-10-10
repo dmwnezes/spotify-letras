@@ -135,4 +135,16 @@ class ScreensRenderTest {
         rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}, startLive = true) }
         save("modo-gravar")
     }
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xhdpi")
+    fun recordModeTallPhone() {
+        rule.mainClock.autoAdvance = false
+        val lines = listOf(LyricLine(0, "você sabe que não é o mesmo"), LyricLine(6000, "de antes"))
+        val track = Track("x", "Canção de Teste", listOf("Artista Exemplo"), "Álbum", null, 200_000)
+        val state = UiState(loggedIn = true, firstLoadDone = true, now = NowPlaying(track, true, 4800, SystemClock.elapsedRealtime()),
+            lyrics = LyricsState.Ready(Lyrics.Synced(lines)))
+        rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}, startLive = true) }
+        save("modo-gravar-alto")
+    }
 }

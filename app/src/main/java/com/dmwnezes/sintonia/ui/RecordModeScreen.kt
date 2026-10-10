@@ -133,7 +133,14 @@ fun RecordModeScreen(
     }
 }
 
-/** O que aparece na gravação. */
+/**
+ * Área segura dos Stories do Instagram (vídeo 9:16, como 1080×1920):
+ * no topo ficam a foto do perfil e a barra de progresso (~14%), embaixo a caixa de resposta e o coração (~20%).
+ */
+private const val SAFE_TOP = 0.14f
+private const val SAFE_BOTTOM = 0.80f
+
+/** O que aparece na gravação, dentro de um quadro 9:16 centralizado na tela. */
 @Composable
 private fun RecordContent(state: UiState, dim: Boolean) {
     val now = state.now
@@ -142,58 +149,75 @@ private fun RecordContent(state: UiState, dim: Boolean) {
     val nowState by rememberUpdatedState(now)
     val offset by rememberUpdatedState(state.lyricsOffsetMs)
 
-    BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = if (dim) 0.35f else 1f }) {
-        val h = maxHeight
-        if (lines != null) {
-            EditLyricsView(
-                lines = lines,
-                positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                centerFraction = 0.69f,
-                maxWidthFraction = 0.80f,
-            )
-        }
-        Column(
-            Modifier.fillMaxWidth().padding(top = h * 0.085f, start = 32.dp, end = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            AsyncImage(
-                model = track?.imageUrl,
-                contentDescription = "Capa",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth(0.56f)
-                    .aspectRatio(1f)
-                    .shadow(30.dp, RoundedCornerShape(16.dp), ambientColor = Cream.copy(alpha = 0.35f), spotColor = Cream.copy(alpha = 0.35f))
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Cream.copy(alpha = 0.06f)),
-            )
-            Spacer(Modifier.height(22.dp))
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // Celulares são mais altos que 9:16; o Instagram corta o que sobra em cima e embaixo.
+        val frameW = if (maxWidth * 16f / 9f <= maxHeight) maxWidth else maxHeight * 9f / 16f
+        val frameH = frameW * 16f / 9f
+        Box(Modifier.size(frameW, frameH).graphicsLayer { alpha = if (dim) 0.35f else 1f }) {
+            if (lines != null) {
+                EditLyricsView(
+                    lines = lines,
+                    positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
+                    centerFraction = 0.605f,
+                    maxWidthFraction = 0.74f,
+                )
+            }
+            Column(
+                Modifier.fillMaxWidth().padding(top = frameH * (SAFE_TOP + 0.01f), start = 32.dp, end = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AsyncImage(
+                    model = track?.imageUrl,
+                    contentDescription = "Capa",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(frameW * 0.36f)
+                        .shadow(30.dp, RoundedCornerShape(16.dp), ambientColor = Cream.copy(alpha = 0.35f), spotColor = Cream.copy(alpha = 0.35f))
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Cream.copy(alpha = 0.06f)),
+                )
+                Spacer(Modifier.height(frameH * 0.018f))
+                Text(
+                    track?.name ?: "Toque uma música no Spotify",
+                    color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp,
+                    textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                track?.let {
+                    Text(
+                        it.artistLine, color = Cream.copy(alpha = 0.65f), fontFamily = Montserrat, fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+                if (track != null && lines == null && state.lyrics !is LyricsState.Loading) {
+                    Text(
+                        "Esta música não tem letra sincronizada.",
+                        color = Cream.copy(alpha = 0.5f), fontFamily = Montserrat, fontSize = 13.sp,
+                        modifier = Modifier.padding(top = frameH * 0.1f),
+                    )
+                }
+            }
             Text(
-                track?.name ?: "Toque uma música no Spotify",
-                color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp,
-                textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                "@dmwnezes",
+                color = Cream.copy(alpha = 0.6f), fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = frameH * (SAFE_BOTTOM - 0.045f)),
             )
-            track?.let {
-                Text(
-                    it.artistLine, color = Cream.copy(alpha = 0.65f), fontFamily = Montserrat, fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            if (track != null && lines == null && state.lyrics !is LyricsState.Loading) {
-                Text(
-                    "Esta música não tem letra sincronizada.",
-                    color = Cream.copy(alpha = 0.5f), fontFamily = Montserrat, fontSize = 13.sp,
-                    modifier = Modifier.padding(top = h * 0.12f),
-                )
-            }
+            // Na preparação, mostra o quadro dos Stories e as faixas que o Instagram cobre.
+            if (dim) SafeAreaGuide()
         }
-        Text(
-            "@dmwnezes",
-            color = Cream.copy(alpha = 0.6f), fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = h * 0.045f),
-        )
+    }
+}
+
+@Composable
+private fun SafeAreaGuide() {
+    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+        val dash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(2f, pathEffect = dash)
+        drawRect(Cream.copy(alpha = 0.5f), style = stroke)
+        drawRect(Color.White.copy(alpha = 0.06f), size = size.copy(height = size.height * SAFE_TOP))
+        drawRect(Color.White.copy(alpha = 0.06f), topLeft = androidx.compose.ui.geometry.Offset(0f, size.height * SAFE_BOTTOM),
+            size = size.copy(height = size.height * (1 - SAFE_BOTTOM)))
     }
 }
 
@@ -208,6 +232,7 @@ private fun SetupPanel(onStart: (fromSongStart: Boolean) -> Unit, onExit: () -> 
             Step("1", "Puxe a barra de notificações e ligue o Gravador de tela com o áudio do dispositivo (\"Mídia\" ou \"Som do dispositivo\").")
             Step("2", "Volte aqui e toque em Começar. Depois de 3 segundos a tela fica limpa: só capa, nome, letra e @dmwnezes.")
             Step("3", "Para sair, toque na tela e em \"Sair\", ou use o gesto de voltar. Corte o começo e o fim no editor do Instagram.")
+            Step("4", "Tudo fica dentro do quadro dos Stories (pontilhado), longe do perfil, da caixa de resposta e do coração.")
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { onStart(true) }, modifier = Modifier.fillMaxWidth().height(50.dp),
