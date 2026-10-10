@@ -252,7 +252,23 @@ class Playback(
         spotify.seek(ms)
     }
 
-    fun playTrack(id: String) = control { spotify.playTrack(id) }
+    fun playTrack(id: String) {
+        scope.launch {
+            try {
+                spotify.playTrack(id)
+                delay(450)
+                pollOnce()
+            } catch (e: Exception) {
+                // Spotify fechado: abre o app direto na música.
+                val opened = runCatching {
+                    val i = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("spotify:track:$id"))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    AppGraph.app.startActivity(i)
+                }.isSuccess
+                _messages.tryEmit(if (opened) "Abrindo a música no Spotify…" else (e.message ?: "Não deu para tocar agora."))
+            }
+        }
+    }
 
     /** Volta a música para o começo e garante que está tocando (modo gravar). */
     fun restartAndPlay() = control {

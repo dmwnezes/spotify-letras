@@ -1,6 +1,17 @@
 package com.dmwnezes.sintonia.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,65 +76,74 @@ fun ProfileScreen(
     onOpenSettings: () -> Unit,
     onOpenQuiz: () -> Unit,
     bottomPadding: PaddingValues,
+    onPlayTrack: (Track) -> Unit = {},
 ) {
     LaunchedEffect(Unit) { onRange(range) }
+    var showAllTracks by rememberSaveable { mutableStateOf(false) }
+    var showAllRecent by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
         Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = 0.35f)).statusBarsPadding(),
-        contentPadding = PaddingValues(
-            top = 12.dp,
-            bottom = bottomPadding.calculateBottomPadding() + 24.dp,
-        ),
+        contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding.calculateBottomPadding() + 24.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 val user = (state as? ProfileState.Ready)?.data?.user
-                if (user?.imageUrl != null) {
-                    AsyncImage(user.imageUrl, null, Modifier.size(44.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                    Spacer(Modifier.width(12.dp))
+                Box(
+                    Modifier.size(52.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.4f)))).padding(2.5.dp)
+                ) {
+                    AsyncImage(user?.imageUrl, null, Modifier.fillMaxSize().clip(CircleShape).background(Palette.surface), contentScale = ContentScale.Crop)
                 }
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Perfil Musical", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                    user?.name?.let { Text(it, color = Palette.ink.copy(alpha = 0.65f), fontSize = 14.sp) }
+                    Text("Olá, ${user?.name ?: ""}".trimEnd(',', ' '), color = Palette.ink.copy(alpha = 0.65f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Seu perfil", color = Palette.ink, fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
-                IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Atualizar", tint = Palette.ink) }
-                IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Ajustes", tint = Palette.ink) }
-                IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Rounded.Logout, "Sair", tint = Palette.ink.copy(alpha = 0.7f)) }
+                GlassIconButton(Icons.Rounded.Settings, "Ajustes", onOpenSettings, size = 42.dp)
+                Spacer(Modifier.width(8.dp))
+                GlassIconButton(Icons.AutoMirrored.Rounded.Logout, "Sair", onLogout, size = 42.dp)
             }
         }
         item {
-            Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TimeRange.entries.forEach { r ->
-                    AppChip(r.label, selected = r == range, onClick = { onRange(r) })
-                }
-            }
+            SegmentedControl(
+                TimeRange.entries.map { shortLabel(it) }, TimeRange.entries.indexOf(range), { onRange(TimeRange.entries[it]) },
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
+            )
         }
 
         when (state) {
             ProfileState.Loading -> item {
-                Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.ink)
-                }
+                Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.ink) }
             }
             is ProfileState.Failed -> item {
                 Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(state.message, color = Palette.ink.copy(alpha = 0.75f))
-                    TextButton(onClick = onRefresh) { Text("Tentar de novo", color = Palette.ink) }
+                    Spacer(Modifier.height(12.dp))
+                    AppButton(onClick = onRefresh) { Text("Tentar de novo") }
                 }
             }
             is ProfileState.Ready -> {
                 val d = state.data
-                item { Highlights(d, range, accent) }
+                item { TopArtistHero(d, range, accent) }
+                item { QuickStats(d, accent) }
                 item { QuizCard(accent, onOpenQuiz) }
-                if (d.topArtists.isNotEmpty()) {
-                    item { SectionTitle("Artistas no topo") }
+                if (d.topArtists.size > 1) {
+                    item { SectionHeader("Artistas no topo") }
                     item {
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            itemsIndexed(d.topArtists) { i, a ->
-                                Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(a.imageUrl, a.name, Modifier.size(96.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
-                                    Spacer(Modifier.height(6.dp))
-                                    Text("${i + 1}. ${a.name}", color = Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            itemsIndexed(d.topArtists.take(20)) { i, a ->
+                                Column(Modifier.width(92.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box {
+                                        AsyncImage(a.imageUrl, a.name, Modifier.size(92.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
+                                        Box(
+                                            Modifier.align(Alignment.BottomStart).size(30.dp).clip(CircleShape)
+                                                .background(if (i < 3) accent else Palette.surface).border(2.dp, Palette.surface, CircleShape),
+                                            contentAlignment = Alignment.Center,
+                                        ) { Text("${i + 1}", color = if (i < 3) Color.Black else Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold) }
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(a.name, color = Palette.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                                 }
                             }
                         }
@@ -131,19 +151,80 @@ fun ProfileScreen(
                 }
                 val genres = topGenres(d)
                 if (genres.isNotEmpty()) {
-                    item { SectionTitle("Seus gêneros") }
-                    item { GenreBars(genres, accent) }
+                    item { SectionHeader("Seus gêneros") }
+                    item { GenreCloud(genres, accent) }
                 }
                 if (d.topTracks.isNotEmpty()) {
-                    item { SectionTitle("Músicas no topo") }
-                    itemsIndexed(d.topTracks.take(20)) { i, t -> TrackRow(t, leading = "${i + 1}") }
+                    item { SectionHeader("Músicas no topo", action = if (d.topTracks.size > 5) (if (showAllTracks) "Menos" else "Ver todas") else null) { showAllTracks = !showAllTracks } }
+                    item { HintLine("Toque para tocar no Spotify") }
+                    itemsIndexed(d.topTracks.take(if (showAllTracks) 30 else 5)) { i, t -> TrackRow(t, leading = "${i + 1}", accent = accent, onClick = { onPlayTrack(t) }) }
                 }
                 if (d.recent.isNotEmpty()) {
-                    item { SectionTitle("Tocadas recentemente") }
-                    itemsIndexed(d.recent.take(25)) { _, r -> TrackRow(r.track, trailing = ago(r.playedAtMs)) }
+                    item { SectionHeader("Tocadas agora há pouco", action = if (d.recent.size > 5) (if (showAllRecent) "Menos" else "Ver todas") else null) { showAllRecent = !showAllRecent } }
+                    itemsIndexed(d.recent.take(if (showAllRecent) 30 else 5)) { _, r -> TrackRow(r.track, trailing = ago(r.playedAtMs), accent = accent, onClick = { onPlayTrack(r.track) }) }
                 }
             }
         }
+    }
+}
+
+private fun shortLabel(r: TimeRange) = when (r) {
+    TimeRange.SHORT -> "4 semanas"
+    TimeRange.MEDIUM -> "6 meses"
+    TimeRange.LONG -> "Sempre"
+}
+
+@Composable
+private fun HintLine(t: String) {
+    Text(t, color = Palette.ink.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(start = 20.dp, bottom = 4.dp))
+}
+
+/** O artista nº 1 em destaque, com a foto dele de fundo. */
+@Composable
+private fun TopArtistHero(d: ProfileData, range: TimeRange, accent: Color) {
+    val a = d.topArtists.firstOrNull() ?: return
+    val topTrack = d.topTracks.firstOrNull()
+    val period = when (range) {
+        TimeRange.SHORT -> "das últimas 4 semanas"
+        TimeRange.MEDIUM -> "dos últimos 6 meses"
+        TimeRange.LONG -> "de todos os tempos"
+    }
+    Box(
+        Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(250.dp)
+            .shadow(20.dp, RoundedCornerShape(28.dp), ambientColor = accent, spotColor = accent)
+            .clip(RoundedCornerShape(28.dp))
+    ) {
+        AsyncImage(a.imageUrl, a.name, Modifier.fillMaxSize().background(accent.copy(alpha = 0.3f)), contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.35f), Color.Black.copy(alpha = 0.88f)))))
+        Column(Modifier.align(Alignment.BottomStart).padding(20.dp)) {
+            Text(
+                "Nº 1 $period".uppercase(), color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(accent).padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(a.name, color = Color.White, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (topTrack != null) {
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(topTrack.imageUrl, null, Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("Música mais ouvida", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
+                        Text("${topTrack.name} · ${topTrack.artists.firstOrNull().orEmpty()}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickStats(d: ProfileData, accent: Color) {
+    val distinct = d.recent.flatMap { it.track.artists.take(1) }.distinct().size
+    val peak = peakHour(d.recent)
+    Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StatTile("$distinct", "artistas nas últimas ${d.recent.size} músicas", Modifier.weight(1f), Icons.Rounded.Groups, accent)
+        StatTile(peak?.let { "${it}h" } ?: "–", "seu horário de ouvir música", Modifier.weight(1f), Icons.Rounded.Schedule, accent)
     }
 }
 
@@ -151,102 +232,62 @@ fun ProfileScreen(
 private fun QuizCard(accent: Color, onClick: () -> Unit) {
     Row(
         Modifier
-            .padding(start = 20.dp, end = 20.dp, top = 14.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(Palette.ink.copy(alpha = 0.08f))
+            .background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.35f), Palette.ink.copy(alpha = 0.06f))))
+            .border(1.dp, Palette.ink.copy(alpha = 0.10f), RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .padding(18.dp),
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(46.dp).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Quiz, null, tint = Color.Black)
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("Quiz: adivinhe a música", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Text("Trechos das letras das músicas que você mais ouve", color = Palette.ink.copy(alpha = 0.65f), fontSize = 13.sp)
+            Text("Quiz da letra", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("Adivinhe a música pelo trecho", color = Palette.ink.copy(alpha = 0.65f), fontSize = 13.sp)
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = Palette.ink.copy(alpha = 0.6f))
     }
 }
 
+/** Gêneros como pílulas: quanto mais você ouve, maior e mais forte. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 10.dp),
-    )
-}
-
-@Composable
-private fun Highlights(d: ProfileData, range: TimeRange, accent: Color) {
-    val topArtist = d.topArtists.firstOrNull()?.name
-    val topTrack = d.topTracks.firstOrNull()
-    val distinct = d.recent.flatMap { it.track.artists.take(1) }.distinct().size
-    val peak = peakHour(d.recent)
-    val period = when (range) {
-        TimeRange.SHORT -> "nas últimas 4 semanas"
-        TimeRange.MEDIUM -> "nos últimos 6 meses"
-        TimeRange.LONG -> "desde sempre"
-    }
-    Column(
-        Modifier
-            .padding(horizontal = 20.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(accent.copy(alpha = 0.22f))
-            .padding(18.dp)
+private fun GenreCloud(genres: List<Pair<String, Float>>, accent: Color) {
+    val max = genres.maxOf { it.second }
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier.padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (topArtist != null) {
-            Text("Seu artista nº 1 $period", color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp)
-            Text(topArtist, color = Palette.ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        }
-        if (topTrack != null) {
-            Spacer(Modifier.height(10.dp))
-            Text("Música mais ouvida", color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp)
-            Text("${topTrack.name} · ${topTrack.artists.firstOrNull().orEmpty()}", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Stat("$distinct", "artistas nas\núltimas ${d.recent.size} tocadas")
-            if (peak != null) Stat("${peak}h", "horário em que\nvocê mais ouve")
-        }
-    }
-}
-
-@Composable
-private fun Stat(value: String, label: String) {
-    Column {
-        Text(value, color = Palette.ink, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-        Text(label, color = Palette.ink.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 15.sp)
-    }
-}
-
-@Composable
-private fun GenreBars(genres: List<Pair<String, Float>>, accent: Color) {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         genres.forEach { (name, share) ->
-            Column {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(name.replaceFirstChar { it.uppercase() }, color = Palette.ink, fontSize = 14.sp)
-                    Text("${(share * 100).toInt()}%", color = Palette.ink.copy(alpha = 0.6f), fontSize = 13.sp)
-                }
-                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.12f))) {
-                    Box(Modifier.fillMaxWidth(share.coerceIn(0.02f, 1f)).height(6.dp).clip(CircleShape).background(accent))
-                }
-            }
+            val k = share / max
+            Text(
+                name.replaceFirstChar { it.uppercase() },
+                color = if (k > 0.6f) Color.Black else Palette.ink,
+                fontSize = (13 + 7 * k).sp, fontWeight = if (k > 0.6f) FontWeight.ExtraBold else FontWeight.SemiBold,
+                modifier = Modifier.clip(RoundedCornerShape(50))
+                    .background(if (k > 0.6f) accent else accent.copy(alpha = 0.12f + 0.3f * k))
+                    .padding(horizontal = (12 + 6 * k).dp, vertical = (7 + 3 * k).dp),
+            )
         }
     }
 }
 
 @Composable
-private fun TrackRow(t: Track, leading: String? = null, trailing: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun TrackRow(t: Track, accent: Color, leading: String? = null, trailing: String? = null, onClick: () -> Unit = {}) {
+    Row(
+        Modifier.padding(horizontal = 12.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (leading != null) {
-            Text(leading, color = Palette.ink.copy(alpha = 0.55f), fontSize = 14.sp, modifier = Modifier.width(28.dp))
+            Text(leading, color = if (leading == "1") accent else Palette.ink.copy(alpha = 0.55f), fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(28.dp))
         }
-        AsyncImage(t.imageUrl, null, Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
+        AsyncImage(t.imageUrl, null, Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)).background(Palette.ink.copy(alpha = 0.08f)), contentScale = ContentScale.Crop)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(t.name, color = Palette.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -256,6 +297,8 @@ private fun TrackRow(t: Track, leading: String? = null, trailing: String? = null
             Spacer(Modifier.width(8.dp))
             Text(trailing, color = Palette.ink.copy(alpha = 0.5f), fontSize = 12.sp)
         }
+        Spacer(Modifier.width(6.dp))
+        Icon(Icons.Rounded.PlayArrow, "Tocar", tint = Palette.ink.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
     }
 }
 

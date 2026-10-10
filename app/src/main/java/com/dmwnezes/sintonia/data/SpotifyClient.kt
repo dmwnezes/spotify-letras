@@ -138,7 +138,22 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
     /** Toca uma faixa específica no aparelho ativo do Spotify. */
     suspend fun playTrack(id: String) {
         val body = JSONObject().put("uris", JSONArray().put("spotify:track:$id")).toString()
-        call("PUT", "/me/player/play", body.toRequestBody("application/json".toMediaType()))
+        try {
+            call("PUT", "/me/player/play", body.toRequestBody("application/json".toMediaType()))
+        } catch (e: SpotifyException) {
+            // Sem aparelho ativo: tenta tocar no celular (ou no primeiro aparelho que o Spotify conhece).
+            if (e.code != 404) throw e
+            val device = devices().let { list -> list.firstOrNull { it.second == "Smartphone" } ?: list.firstOrNull() } ?: throw e
+            call("PUT", "/me/player/play?device_id=${device.first}", body.toRequestBody("application/json".toMediaType()))
+        }
+    }
+
+    /** Aparelhos onde o Spotify está aberto: (id, tipo). */
+    private suspend fun devices(): List<Pair<String, String>> {
+        val json = JSONObject(call("GET", "/me/player/devices") ?: "{}")
+        return json.optJSONArray("devices").objects().mapNotNull { d ->
+            d.optString("id").takeIf { it.isNotBlank() && !d.optBoolean("is_restricted") }?.let { it to d.optString("type") }
+        }
     }
 
     /** Toca uma lista de faixas, em ordem, no aparelho ativo. */

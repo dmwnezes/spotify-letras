@@ -1,5 +1,9 @@
 package com.dmwnezes.sintonia
 
+import com.dmwnezes.sintonia.ui.SearchScreen
+import com.dmwnezes.sintonia.ui.NavItem
+import com.dmwnezes.sintonia.ui.FloatingNavBar
+import androidx.compose.material.icons.rounded.Search
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
@@ -174,7 +178,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(open) {
             when (open) {
                 "letra" -> tab = 0
-                "buscar" -> { tab = 0; showSearch = true }
+                "buscar" -> tab = 5
                 "caderno" -> tab = 3
                 "quiz" -> { tab = 1; showQuiz = true }
             }
@@ -211,27 +215,18 @@ class MainActivity : ComponentActivity() {
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar(containerColor = Palette.scrim.copy(alpha = if (Palette.dark) 0.45f else 0.6f), tonalElevation = 0.dp) {
-                    val itemColors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Palette.onInk,
-                        selectedTextColor = Palette.ink,
-                        indicatorColor = Palette.ink,
-                        unselectedIconColor = Palette.ink.copy(alpha = 0.6f),
-                        unselectedTextColor = Palette.ink.copy(alpha = 0.6f),
-                    )
-                    listOf(
-                        Triple("Letras", Icons.Rounded.Lyrics, 0),
-                        Triple("Descobrir", Icons.Rounded.Explore, 4),
-                        Triple("Perfil", Icons.Rounded.Person, 1),
-                        Triple("Histórico", Icons.Rounded.History, 2),
-                        Triple("Caderno", Icons.Rounded.AutoStories, 3),
-                    ).forEach { (label, icon, i) ->
-                        NavigationBarItem(
-                            selected = tab == i, onClick = { tab = i },
-                            icon = { Icon(icon, null) }, label = { Text(label) }, colors = itemColors,
-                        )
-                    }
-                }
+                FloatingNavBar(
+                    items = listOf(
+                        NavItem("Letras", Icons.Rounded.Lyrics, 0),
+                        NavItem("Buscar", Icons.Rounded.Search, 5),
+                        NavItem("Descobrir", Icons.Rounded.Explore, 4),
+                        NavItem("Perfil", Icons.Rounded.Person, 1),
+                        NavItem("Histórico", Icons.Rounded.History, 2),
+                        NavItem("Caderno", Icons.Rounded.AutoStories, 3),
+                    ),
+                    selected = tab,
+                    onSelect = { tab = it },
+                )
             },
         ) { padding ->
             Box(Modifier.fillMaxSize()) {
@@ -267,6 +262,7 @@ class MainActivity : ComponentActivity() {
                         onOpenSettings = { showSettings = true },
                         onOpenQuiz = { showQuiz = true },
                         bottomPadding = padding,
+                        onPlayTrack = { vm.playTrack(it.id) },
                     )
                     2 -> HistoryScreen(
                         ui = history,
@@ -277,6 +273,12 @@ class MainActivity : ComponentActivity() {
                         onSaveBackup = historyVm::saveBackup,
                         onClear = historyVm::clear,
                         onWrapped = { wrappedKey = it },
+                        bottomPadding = padding,
+                    )
+                    5 -> SearchScreen(
+                        onPlay = { vm.playTrack(it.id) },
+                        onQueue = { vm.queue(it.id, it.name) },
+                        accent = state.colors.glow1,
                         bottomPadding = padding,
                     )
                     4 -> DiscoverScreen(
@@ -313,6 +315,7 @@ class MainActivity : ComponentActivity() {
             onPlay = { vm.playTrack(it.id) },
             onQueue = { vm.queue(it.id, it.name) },
             onDismiss = { showSearch = false },
+            accent = state.colors.glow1,
         )
         foundUpdate?.let { r ->
             UpdateDialog(initial = r, onSkip = { AppGraph.prefs.skippedUpdate = it.tag }, onDismiss = { foundUpdate = null })

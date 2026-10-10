@@ -260,6 +260,7 @@ fun LyricsScreen(
                         onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
                         onSearch = onOpenSearch,
                         onRecordMode = onRecordMode,
+                        accent = state.colors.glow1,
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         if (editLines == null) Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
@@ -290,6 +291,7 @@ fun LyricsScreen(
                         onNext = onNext,
                         onPrevious = onPrevious,
                         glow = state.colors.glow1,
+                        onSeek = onSeek,
                     )
                 }
             }
@@ -376,6 +378,7 @@ private fun TrackHeader(
     onNote: () -> Unit,
     onSearch: () -> Unit,
     onRecordMode: () -> Unit,
+    accent: Color = Color.White,
 ) {
     val track = now.track ?: return
     var menu by remember { mutableStateOf(false) }
@@ -408,34 +411,24 @@ private fun TrackHeader(
             Spacer(Modifier.width(8.dp))
             Box(Modifier.padding(end = 12.dp)) {
                 GlassIconButton(Icons.Rounded.MoreVert, "Mais opções", { menu = true }, size = 40.dp)
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Modo gravar para Stories") },
-                        leadingIcon = { Icon(Icons.Rounded.Videocam, null) },
-                        onClick = { menu = false; onRecordMode() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Anotar um momento") },
-                        leadingIcon = { Icon(Icons.Rounded.EditNote, null) },
-                        onClick = { menu = false; onNote() },
-                    )
-                    if (!playerOnly) {
-                        DropdownMenuItem(text = { Text("Ajustar sincronia da letra") }, onClick = { menu = false; onTune() })
-                        MenuCheck("Acender palavra por palavra", karaoke) { onSetKaraoke(!karaoke); menu = false }
-                        HorizontalDivider()
-                        Text("Estilo da letra", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                        LyricsMode.entries.forEach { m -> MenuCheck(m.label, m == lyricsMode) { onSetLyricsMode(m); menu = false } }
-                    }
-                    HorizontalDivider()
-                    Text("Visualizer", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    MenuCheck("Reagir ao som real", realViz) { onSetRealViz(true); menu = false }
-                    MenuCheck("Animação", !realViz) { onSetRealViz(false); menu = false }
-                    HorizontalDivider()
-                    Text("Tema", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                    VizTheme.entries.forEach { t -> MenuCheck(t.label, t == theme) { onSetTheme(t); menu = false } }
-                }
             }
         }
+        if (menu) LyricsOptionsSheet(
+            mode = lyricsMode,
+            accent = accent,
+            karaoke = karaoke,
+            realViz = realViz,
+            vizTheme = theme,
+            playerOnly = playerOnly,
+            onMode = onSetLyricsMode,
+            onRecord = onRecordMode,
+            onNote = onNote,
+            onTune = onTune,
+            onKaraoke = onSetKaraoke,
+            onRealViz = onSetRealViz,
+            onVizTheme = onSetTheme,
+            onDismiss = { menu = false },
+        )
         val status = when (translation) {
             is TranslationState.Loading ->
                 if (translation.downloading) "Baixando o tradutor de ${translation.language} (só na primeira vez)…"
@@ -714,6 +707,7 @@ private fun PlayerControls(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     glow: Color = Color.White,
+    onSeek: (Long) -> Unit = {},
 ) {
     val duration = now.track?.durationMs ?: 1L
     var pos by remember { mutableLongStateOf(now.positionAt(SystemClock.elapsedRealtime())) }
@@ -725,19 +719,7 @@ private fun PlayerControls(
         }
     }
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
-        LinearProgressIndicator(
-            progress = { (pos.toFloat() / duration).coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
-            color = Palette.ink,
-            trackColor = Palette.ink.copy(alpha = 0.22f),
-            strokeCap = StrokeCap.Round,
-            gapSize = 0.dp,
-            drawStopIndicator = {},
-        )
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(fmt(pos), color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp)
-            Text("-" + fmt(duration - pos), color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp)
-        }
+        SeekBar(pos, duration, onSeek = { ms -> pos = ms; onSeek(ms) })
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

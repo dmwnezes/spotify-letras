@@ -50,6 +50,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("live_lyrics", false)
         set(v) = sp.edit().putBoolean("live_lyrics", v).apply()
 
+    /** Últimas buscas de música (mais recente primeiro). */
+    var recentSearches: List<String>
+        get() = (sp.getString("recent_searches", "") ?: "").split('\n').filter { it.isNotBlank() }
+        set(v) = sp.edit().putString("recent_searches", v.take(8).joinToString("\n")).apply()
+
     /** Acender a linha atual palavra por palavra (karaokê). */
     var karaoke: Boolean
         get() = sp.getBoolean("karaoke", true)

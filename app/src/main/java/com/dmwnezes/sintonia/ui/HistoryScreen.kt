@@ -1,6 +1,24 @@
 package com.dmwnezes.sintonia.ui
 
 import android.content.Intent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Repeat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -98,32 +116,16 @@ fun HistoryScreen(
         contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding.calculateBottomPadding() + 32.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Histórico", color = Palette.ink, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Histórico", color = Palette.ink, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     ui.stats?.all?.let { Text("${it.firstDay} a ${it.lastDay}", color = Dim, fontSize = 13.sp) }
                 }
+                GlassIconButton(Icons.Rounded.FileOpen, "Ler arquivo", openPicker, size = 42.dp, enabled = !ui.importing)
+                Spacer(Modifier.width(8.dp))
+                GlassIconButton(Icons.Rounded.IosShare, "Exportar", { showExport = true }, size = 42.dp, enabled = ui.stats != null && !ui.importing)
             }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                AppOutlinedButton(onClick = openPicker, enabled = !ui.importing, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.FileOpen, null, tint = Palette.ink, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Ler arquivo", color = Palette.ink)
-                }
-                AppButton(
-                    onClick = { showExport = true },
-                    enabled = ui.stats != null && !ui.importing,
-                    modifier = Modifier.weight(1f),
-                    containerColor = Palette.ink, contentColor = Palette.onInk,
-                ) {
-                    Icon(Icons.Rounded.IosShare, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Exportar")
-                }
-            }
+            Spacer(Modifier.height(14.dp))
         }
 
         val stats = ui.stats
@@ -255,122 +257,25 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
         }
     }
 
-    item { Hero(p, accent) }
+    item(key = "hero-${p.key}") { Hero(p, accent) }
+    item { WrappedBanner(p.key, accent) { onWrapped(p.key) } }
 
     item {
-        Section("Retrospectiva")
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            Text(Retrospective.forPeriod(stats, p.key), color = Palette.ink.copy(alpha = 0.92f), fontSize = 15.sp, lineHeight = 22.sp)
-            Spacer(Modifier.height(14.dp))
-            AppButton(
-                onClick = { onWrapped(p.key) },
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = accent, contentColor = Color.Black,
-            ) {
-                Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (isAll) "Ver retrospectiva animada" else "Ver retrospectiva de ${p.key}", fontWeight = FontWeight.Bold)
-            }
-        }
+        SectionHeader("Destaques")
+        Highlights(stats, p, accent)
     }
 
-    item {
-        Section(if (isAll) "Horas por ano" else "Horas por mês")
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            val bars = p.monthMs
-            BarChart(
-                values = bars.map { it.ms.toFloat() },
-                labels = bars.map { if (isAll) "'" + it.name.takeLast(2) else monthLabel(it.name).take(3) },
-                accent = accent,
-            )
-            bars.maxByOrNull { it.ms }?.let {
-                Text(
-                    "Pico: ${if (isAll) it.name else monthLabel(it.name)}, ${fmtHours(it.ms)}",
-                    color = Dim, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-        }
+    item(key = "tops-${p.key}") {
+        SectionHeader("Seus mais ouvidos")
+        TopTabs(p, accent)
     }
 
-    rankedSection("Artistas mais ouvidos", p.topArtists, accent) { "${fmtHours(it.ms)} · ${fmtInt(it.count)} plays" }
-    rankedSection("Músicas mais ouvidas", p.topTracks, accent) { "${it.sub} · ${fmtInt(it.count)}x" }
-    rankedSection("Álbuns mais ouvidos", p.topAlbums, accent, initial = 5) { "${it.sub} · ${fmtHours(it.ms)}" }
-
-    item {
-        Section("Quando você ouve")
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            Text("Por hora do dia", color = Dim, fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            BarChart(p.hourMs.map { it.toFloat() }, (0..23).map { if (it % 3 == 0) "${it}h" else "" }, accent, height = 90)
-            Spacer(Modifier.height(18.dp))
-            Text("Por dia da semana", color = Dim, fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            BarChart(p.weekdayMs.map { it.toFloat() }, listOf("seg", "ter", "qua", "qui", "sex", "sáb", "dom"), accent, height = 90)
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                MiniStat(pct(p.shuffleStreams, p.streams), "no aleatório")
-                MiniStat("${(p.skipRate * 100).roundToInt()}%", "puladas")
-                MiniStat(pct(p.offlineStreams, p.streams), "offline")
-            }
-        }
+    item(key = "when-${p.key}") {
+        SectionHeader("Quando você ouve")
+        WhenCard(p, isAll, accent)
     }
 
-    item {
-        Section("Recordes")
-        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            p.biggestDay?.let { Record("Dia que você mais ouviu", it.name, fmtHours(it.ms)) }
-            if (p.longestStreakDays > 1) Record("Maior sequência de dias seguidos", "${p.longestStreakDays} dias", "${p.streakFrom} a ${p.streakTo}")
-            p.obsession?.let { Record("Obsessão de um dia só", "\"${it.name}\" ${it.count}x", it.sub) }
-            Record("Dias com música", fmtInt(p.activeDays), "${fmtInt(p.distinctTracks)} músicas · ${fmtInt(p.distinctAlbums)} álbuns")
-        }
-    }
-
-    item {
-        Section(if (isAll) "Quando cada artista chegou" else "Descobertas de ${p.key}")
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            if (isAll) {
-                Text("Primeira vez que você ouviu seus artistas principais", color = Dim, fontSize = 12.sp)
-                Spacer(Modifier.height(8.dp))
-                stats.artistTimeline.take(20).forEach { TimelineRow(it.sub, it.name, accent) }
-            } else {
-                Text("${fmtInt(p.newArtists)} artistas novos", color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.height(8.dp))
-                p.topNewArtists.forEach { TimelineRow(it.sub, "${it.name} · ${fmtHours(it.ms)}", accent) }
-            }
-        }
-    }
-
-    if (p.mostSkipped.isNotEmpty()) {
-        rankedSection("As que você mais pula", p.mostSkipped, accent, numbered = false) { "${fmtInt(it.count)} vezes · ${it.sub}" }
-    }
-    if (p.alwaysFinished.isNotEmpty()) {
-        rankedSection("Sempre ouve até o fim", p.alwaysFinished, accent, numbered = false) { "${it.sub} · ${fmtInt(it.count)}x sem pular" }
-    }
-
-    if (p.reasonsStart.isNotEmpty()) {
-        item {
-            Section("Como as músicas começam")
-            Panel(Modifier.padding(horizontal = 20.dp)) {
-                val total = p.reasonsStart.sumOf { it.count }.coerceAtLeast(1)
-                p.reasonsStart.forEach { ShareBar(it.name, it.count.toFloat() / total, accent) }
-            }
-        }
-    }
-
-    item {
-        Section("Onde você ouve")
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            p.platforms.take(6).forEach { ShareBar(it.name, it.ms.toFloat() / p.ms.coerceAtLeast(1), accent) }
-            if (p.countries.size > 1) {
-                Spacer(Modifier.height(12.dp))
-                Text("Países: " + p.countries.joinToString { "${it.name} ${pctMs(it.ms, p.ms)}" }, color = Dim, fontSize = 13.sp)
-            }
-        }
-    }
-
-    if (p.podcastMs > 0) {
-        rankedSection("Podcasts", p.topShows, accent, initial = 5) { "${fmtHours(it.ms)} · ${fmtInt(it.count)} episódios" }
-    }
+    item(key = "more-${p.key}") { MoreStats(stats, p, isAll, accent) }
 
     item {
         Text(
@@ -386,87 +291,264 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.rankedSection(
-    title: String,
-    list: List<Ranked>,
-    accent: Color,
-    initial: Int = 10,
-    numbered: Boolean = true,
-    detail: (Ranked) -> String,
-) {
-    if (list.isEmpty()) return
-    item(key = "sec-$title") {
-        var expanded by rememberSaveable(title) { mutableStateOf(false) }
-        Section(title)
-        Panel(Modifier.padding(horizontal = 20.dp)) {
-            val maxValue = list.maxOf { maxOf(it.ms, it.count.toLong()) }.coerceAtLeast(1)
-            (if (expanded) list else list.take(initial)).forEachIndexed { i, r ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (numbered) {
-                        Text("${i + 1}", color = if (i < 3) accent else Dim, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(30.dp))
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(r.name, color = Palette.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(detail(r), color = Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Spacer(Modifier.height(4.dp))
-                        val v = maxOf(r.ms, r.count.toLong()).toFloat() / maxValue
-                        Box(Modifier.fillMaxWidth(v.coerceIn(0.02f, 1f)).height(3.dp).clip(CircleShape).background(accent.copy(alpha = 0.7f)))
-                    }
-                }
-            }
-            if (list.size > initial) {
-                TextButton(onClick = { expanded = !expanded }) {
-                    Text(if (expanded) "Mostrar menos" else "Ver todos (${list.size})", color = Palette.ink)
-                }
-            }
-        }
-    }
-}
-
+/** Número principal grande e três blocos logo abaixo. */
 @Composable
 private fun Hero(p: PeriodStats, accent: Color) {
     Column(
         Modifier.padding(horizontal = 20.dp, vertical = 14.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp)).background(accent.copy(alpha = 0.24f)).padding(20.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.18f))))
+            .padding(22.dp)
     ) {
-        Text(if (p.key == "all") "Tempo total ouvindo música" else "Em ${p.key} você ouviu", color = Dim, fontSize = 13.sp)
-        Text(fmtHours(p.ms), color = Palette.ink, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
-        val minutes = p.ms / 60_000
-        Text("${fmtInt(minutes.toInt())} minutos", color = Dim, fontSize = 13.sp)
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-            MiniStat(fmtInt(p.plays), "reproduções")
-            MiniStat(fmtInt(p.distinctArtists), "artistas")
-            MiniStat(fmtInt(p.distinctTracks), "músicas")
+        Text(if (p.key == "all") "Você já ouviu" else "Em ${p.key} você ouviu", color = Palette.ink.copy(alpha = 0.75f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.Bottom) {
+            CountUpText(p.ms / 3_600_000, { fmtInt(it.toInt()) }, 58.sp)
+            Text(" horas", color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+        }
+        val days = p.ms / 86_400_000.0
+        Text(
+            if (days >= 1) "≈ ${"%.0f".format(days)} dias inteiros sem parar" else "${fmtInt((p.ms / 60_000).toInt())} minutos",
+            color = Palette.ink.copy(alpha = 0.75f), fontSize = 14.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile(fmtCompact(p.plays), "plays", Modifier.weight(1f), Icons.Rounded.PlayCircle, Palette.ink)
+            StatTile(fmtCompact(p.distinctArtists), "artistas", Modifier.weight(1f), Icons.Rounded.Mic, Palette.ink)
+            StatTile(fmtCompact(p.distinctTracks), "músicas", Modifier.weight(1f), Icons.Rounded.MusicNote, Palette.ink)
+        }
+    }
+}
+
+/** Atalho grande para a retrospectiva animada. */
+@Composable
+private fun WrappedBanner(key: String, accent: Color, onClick: () -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(24.dp), ambientColor = accent, spotColor = accent)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.horizontalGradient(listOf(accent, lerp(accent, Color(0xFFFF5FA2), 0.45f))))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(28.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(if (key == "all") "Sua retrospectiva" else "Retrospectiva $key", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Assista em telas animadas, como Stories", color = Color.Black.copy(alpha = 0.7f), fontSize = 13.sp)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = Color.Black.copy(alpha = 0.7f))
+    }
+}
+
+private data class Fact(val icon: ImageVector, val label: String, val value: String, val detail: String)
+
+/** Os fatos mais legais do período em cartões que deslizam para o lado. */
+@Composable
+private fun Highlights(stats: HistoryStats, p: PeriodStats, accent: Color) {
+    val facts = buildList {
+        p.topArtists.firstOrNull()?.let { add(Fact(Icons.Rounded.Mic, if (p.key == "all") "Artista da sua vida" else "Artista do ano", it.name, "${fmtHours(it.ms)} ouvindo")) }
+        p.topTracks.firstOrNull()?.let { add(Fact(Icons.Rounded.MusicNote, "Música que mais tocou", it.name, "${it.sub} · ${fmtInt(it.count)} vezes")) }
+        if (p.key == "all") stats.years.mapNotNull { y -> stats.periods[y] }.maxByOrNull { it.ms }?.let {
+            add(Fact(Icons.Rounded.CalendarMonth, "Ano em que mais ouviu", it.key, fmtHours(it.ms)))
+        } else p.monthMs.maxByOrNull { it.ms }?.let { add(Fact(Icons.Rounded.CalendarMonth, "Mês mais intenso", monthLabel(it.name), fmtHours(it.ms))) }
+        if (p.longestStreakDays > 1) add(Fact(Icons.Rounded.LocalFireDepartment, "Maior sequência", "${p.longestStreakDays} dias", "${p.streakFrom} a ${p.streakTo}"))
+        p.biggestDay?.let { add(Fact(Icons.Rounded.EmojiEvents, "Dia recorde", fmtHours(it.ms), it.name)) }
+        p.obsession?.takeIf { it.count >= 5 }?.let { add(Fact(Icons.Rounded.Repeat, "Obsessão de um dia", "${it.count}x", "${it.name} · ${it.sub.substringAfter(" · ")}")) }
+        if (p.newArtists > 0) add(Fact(Icons.Rounded.AutoAwesome, "Artistas novos", fmtInt(p.newArtists), p.topNewArtists.firstOrNull()?.let { "o maior achado: ${it.name}" } ?: "descobertos no período"))
+    }
+    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(facts) { f ->
+            Column(
+                Modifier.width(220.dp).height(160.dp).clip(RoundedCornerShape(24.dp))
+                    .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.26f), Palette.ink.copy(alpha = 0.05f))))
+                    .border(1.dp, Palette.ink.copy(alpha = 0.10f), RoundedCornerShape(24.dp))
+                    .padding(16.dp),
+            ) {
+                Box(Modifier.size(34.dp).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
+                    Icon(f.icon, null, tint = Color.Black, modifier = Modifier.size(19.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                Text(f.label, color = Dim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(f.value, color = Palette.ink, fontSize = 22.sp, lineHeight = 25.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(f.detail, color = Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** Artistas / músicas / álbuns num só cartão, com abas; 5 primeiros e "ver mais". */
+@Composable
+private fun TopTabs(p: PeriodStats, accent: Color) {
+    var tab by rememberSaveable { mutableStateOf(0) }
+    var expanded by rememberSaveable(tab, p.key) { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = 20.dp)) {
+        SegmentedControl(listOf("Artistas", "Músicas", "Álbuns"), tab, { tab = it })
+        Spacer(Modifier.height(12.dp))
+        val list = when (tab) { 0 -> p.topArtists; 1 -> p.topTracks; else -> p.topAlbums }
+        val detail: (Ranked) -> String = when (tab) {
+            0 -> { r -> "${fmtHours(r.ms)} · ${fmtInt(r.count)} plays" }
+            1 -> { r -> "${r.sub} · ${fmtInt(r.count)}x" }
+            else -> { r -> "${r.sub} · ${fmtHours(r.ms)}" }
+        }
+        GlassCard(padding = 10.dp) {
+            val max = list.maxOfOrNull { maxOf(it.ms, it.count.toLong()) }?.coerceAtLeast(1) ?: 1
+            (if (expanded) list.take(30) else list.take(5)).forEachIndexed { i, r -> RankRow(i, r, detail(r), maxOf(r.ms, r.count.toLong()).toFloat() / max, accent) }
+            if (list.size > 5) {
+                Text(
+                    if (expanded) "Mostrar menos" else "Ver mais",
+                    color = Palette.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).clickable { expanded = !expanded }.padding(10.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun Section(title: String) {
-    Text(title, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 26.dp, bottom = 10.dp))
+private fun RankRow(i: Int, r: Ranked, detail: String, share: Float, accent: Color) {
+    val top = i == 0
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            .background(if (top) accent.copy(alpha = 0.18f) else Color.Transparent)
+            .padding(horizontal = 10.dp, vertical = if (top) 12.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(if (top) 36.dp else 28.dp).clip(CircleShape).background(if (i < 3) accent else Palette.ink.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center,
+        ) { Text("${i + 1}", color = if (i < 3) Color.Black else Palette.ink, fontSize = if (top) 16.sp else 13.sp, fontWeight = FontWeight.ExtraBold) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(r.name, color = Palette.ink, fontSize = if (top) 17.sp else 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(detail, color = Dim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(5.dp))
+            Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Palette.ink.copy(alpha = 0.08f))) {
+                Box(Modifier.fillMaxWidth(share.coerceIn(0.02f, 1f)).height(4.dp).clip(CircleShape).background(accent.copy(alpha = 0.85f)))
+            }
+        }
+    }
+}
+
+/** Um gráfico por vez: por ano/mês, por hora, por dia da semana. */
+@Composable
+private fun WhenCard(p: PeriodStats, isAll: Boolean, accent: Color) {
+    var tab by rememberSaveable { mutableStateOf(0) }
+    Column(Modifier.padding(horizontal = 20.dp)) {
+        SegmentedControl(listOf(if (isAll) "Anos" else "Meses", "Horas", "Dias"), tab, { tab = it })
+        Spacer(Modifier.height(12.dp))
+        GlassCard {
+            when (tab) {
+                0 -> {
+                    val bars = p.monthMs
+                    val peak = bars.maxByOrNull { it.ms }
+                    peak?.let { Insight("Pico", if (isAll) it.name else monthLabel(it.name), fmtHours(it.ms)) }
+                    BarChart(bars.map { it.ms.toFloat() }, bars.map { if (isAll) "'" + it.name.takeLast(2) else monthLabel(it.name).take(3) }, accent)
+                }
+                1 -> {
+                    val h = p.hourMs.indices.maxByOrNull { p.hourMs[it] } ?: 0
+                    Insight("Horário favorito", "por volta das ${h}h", partOfDay(h))
+                    BarChart(p.hourMs.map { it.toFloat() }, (0..23).map { if (it % 3 == 0) "${it}h" else "" }, accent)
+                }
+                else -> {
+                    val names = listOf("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
+                    val d = p.weekdayMs.indices.maxByOrNull { p.weekdayMs[it] } ?: 0
+                    Insight("Dia favorito", names[d], "")
+                    BarChart(p.weekdayMs.map { it.toFloat() }, listOf("seg", "ter", "qua", "qui", "sex", "sáb", "dom"), accent)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatTile(pct(p.shuffleStreams, p.streams), "no aleatório", Modifier.weight(1f))
+                StatTile("${(p.skipRate * 100).roundToInt()}%", "puladas", Modifier.weight(1f))
+                StatTile(pct(p.offlineStreams, p.streams), "offline", Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun Insight(label: String, value: String, detail: String) {
+    Text(label, color = Dim, fontSize = 12.sp)
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(value, color = Palette.ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+        if (detail.isNotEmpty()) Text("  $detail", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp))
+    }
+    Spacer(Modifier.height(12.dp))
+}
+
+private fun partOfDay(h: Int) = when (h) { in 5..11 -> "de manhã"; in 12..17 -> "à tarde"; in 18..23 -> "à noite"; else -> "de madrugada" }
+
+/** O resto (descobertas, puladas, onde ouve, podcasts) fica guardado atrás de um toque. */
+@Composable
+private fun MoreStats(stats: HistoryStats, p: PeriodStats, isAll: Boolean, accent: Color) {
+    var open by rememberSaveable(p.key) { mutableStateOf(false) }
+    val rot by animateFloatAsState(if (open) 180f else 0f, label = "seta")
+    Column(Modifier.padding(horizontal = 20.dp).padding(top = 22.dp)) {
+        GlassCard(onClick = { open = !open }, padding = 16.dp) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Mais curiosidades", color = Palette.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("Descobertas, as que você pula, onde e como ouve", color = Dim, fontSize = 12.sp)
+                }
+                Icon(Icons.Rounded.ExpandMore, null, tint = Palette.ink, modifier = Modifier.graphicsLayer { rotationZ = rot })
+            }
+            if (open) {
+                Spacer(Modifier.height(10.dp))
+                SubTitle(if (isAll) "Quando cada artista chegou" else "Descobertas de ${p.key}")
+                if (isAll) stats.artistTimeline.take(10).forEach { TimelineRow(it.sub, it.name, accent) }
+                else p.topNewArtists.take(8).forEach { TimelineRow(it.sub, it.name, accent) }
+                if (p.mostSkipped.isNotEmpty()) {
+                    SubTitle("As que você mais pula")
+                    p.mostSkipped.take(5).forEach { SmallRow(it.name, "${fmtInt(it.count)}x") }
+                }
+                if (p.alwaysFinished.isNotEmpty()) {
+                    SubTitle("Sempre ouve até o fim")
+                    p.alwaysFinished.take(5).forEach { SmallRow(it.name, "${fmtInt(it.count)}x") }
+                }
+                if (p.platforms.isNotEmpty()) {
+                    SubTitle("Onde você ouve")
+                    p.platforms.take(4).forEach { ShareBar(it.name, it.ms.toFloat() / p.ms.coerceAtLeast(1), accent) }
+                }
+                if (p.reasonsStart.isNotEmpty()) {
+                    SubTitle("Como as músicas começam")
+                    val total = p.reasonsStart.sumOf { it.count }.coerceAtLeast(1)
+                    p.reasonsStart.take(4).forEach { ShareBar(it.name, it.count.toFloat() / total, accent) }
+                }
+                if (p.podcastMs > 0) {
+                    SubTitle("Podcasts · ${fmtHours(p.podcastMs)}")
+                    p.topShows.take(3).forEach { SmallRow(it.name, fmtHours(it.ms)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubTitle(t: String) {
+    Text(t, color = Palette.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+}
+
+@Composable
+private fun SmallRow(name: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(name, color = Palette.ink, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(value, color = Dim, fontSize = 13.sp)
+    }
+}
+
+private fun fmtCompact(n: Int): String = when {
+    n >= 1_000_000 -> "%.1f mi".format(n / 1_000_000.0).replace('.', ',')
+    n >= 10_000 -> "%.0f mil".format(n / 1_000.0)
+    n >= 1_000 -> "%.1f mil".format(n / 1_000.0).replace('.', ',')
+    else -> "$n"
 }
 
 @Composable
 private fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Card).padding(16.dp), content = content)
-}
-
-@Composable
-private fun MiniStat(value: String, label: String) {
-    Column {
-        Text(value, color = Palette.ink, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-        Text(label, color = Dim, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun Record(title: String, value: String, detail: String) {
-    Panel {
-        Text(title, color = Dim, fontSize = 12.sp)
-        Text(value, color = Palette.ink, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(detail, color = Dim, fontSize = 12.sp)
-    }
 }
 
 @Composable
