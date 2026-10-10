@@ -1,5 +1,6 @@
 package com.dmwnezes.sintonia.wrapped
 
+import com.dmwnezes.sintonia.ui.AppButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -238,9 +239,9 @@ private fun SlideView(s: Slide) {
                 }
                 Spacer(Modifier.height(28.dp))
                 Reveal(1300) {
-                    Button(
+                    AppButton(
                         onClick = { WrappedCard.share(context, s) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                        containerColor = Color.White, contentColor = Color.Black,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                     ) {
                         Icon(Icons.Rounded.IosShare, null)

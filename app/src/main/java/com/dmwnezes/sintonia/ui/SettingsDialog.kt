@@ -44,7 +44,7 @@ fun SettingsDialog(
     onCheckUpdates: () -> Unit,
     onThemeMode: (ThemeMode) -> Unit = {},
     onLyricsStyle: (LyricsStyle) -> Unit = {},
-    onEditStyle: (Boolean) -> Unit = {},
+    onLyricsMode: (com.dmwnezes.sintonia.edit.LyricsMode) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -62,14 +62,17 @@ fun SettingsDialog(
                 Text("Aparência", fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ThemeMode.entries.forEach { m -> FilterChip(selected = m == state.themeMode, onClick = { onThemeMode(m) }, label = { Text(m.label) }) }
+                    ThemeMode.entries.forEach { m -> AppChip(m.label, selected = m == state.themeMode, onClick = { onThemeMode(m) }) }
                 }
                 Spacer(Modifier.height(10.dp))
                 Text("Estilo da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = state.editStyle, onClick = { onEditStyle(true) }, label = { Text("Edit (estilo reel)") })
-                    FilterChip(selected = !state.editStyle, onClick = { onEditStyle(false) }, label = { Text("Clássico") })
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    com.dmwnezes.sintonia.edit.LyricsMode.entries.forEach { m ->
+                        AppChip(m.label, selected = m == state.lyricsMode, onClick = { onLyricsMode(m) })
+                    }
                 }
+                Text(state.lyricsMode.hint, fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.55f))
                 Text("Fonte da letra (estilo Clássico)", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f), modifier = Modifier.padding(top = 6.dp))
                 val st = state.lyricsStyle
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -85,7 +88,7 @@ fun SettingsDialog(
                 Text("Tamanho da letra", fontSize = 13.sp, color = Palette.ink.copy(alpha = 0.7f), modifier = Modifier.padding(top = 6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("P" to 0.85f, "M" to 1f, "G" to 1.15f, "GG" to 1.3f).forEach { (label, k) ->
-                        FilterChip(selected = st.scale == k, onClick = { onLyricsStyle(st.copy(scale = k)) }, label = { Text(label) })
+                        AppChip(label, selected = st.scale == k, onClick = { onLyricsStyle(st.copy(scale = k)) })
                     }
                 }
                 Text(
@@ -126,10 +129,10 @@ fun SettingsDialog(
                 Text("Tema do visualizer", fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    VizTheme.entries.take(2).forEach { t -> FilterChip(selected = t == state.vizTheme, onClick = { onTheme(t) }, label = { Text(t.label) }) }
+                    VizTheme.entries.take(2).forEach { t -> AppChip(t.label, selected = t == state.vizTheme, onClick = { onTheme(t) }) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    VizTheme.entries.drop(2).forEach { t -> FilterChip(selected = t == state.vizTheme, onClick = { onTheme(t) }, label = { Text(t.label) }) }
+                    VizTheme.entries.drop(2).forEach { t -> AppChip(t.label, selected = t == state.vizTheme, onClick = { onTheme(t) }) }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -137,7 +140,7 @@ fun SettingsDialog(
                         Text("Atualizações", fontWeight = FontWeight.SemiBold)
                         Text("Versão instalada: ${Updater.currentName}", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f))
                     }
-                    androidx.compose.material3.OutlinedButton(onClick = onCheckUpdates) { Text("Buscar") }
+                    AppOutlinedButton(onClick = onCheckUpdates, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)) { Text("Buscar") }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 CreatorCredit()

@@ -52,7 +52,9 @@ object EditLayout {
     }
 
     /** Quebra as palavras de uma linha em pedaços curtos, sem deixar artigo/preposição sozinho no fim. */
-    fun chunk(words: List<EditWord>): List<EditChunk> {
+    fun chunk(words: List<EditWord>, maxChars: Int = MAX_CHARS, maxWords: Int = MAX_WORDS): List<EditChunk> {
+        val MAX_CHARS = maxChars
+        val MAX_WORDS = maxWords
         val out = mutableListOf<MutableList<EditWord>>()
         var cur = mutableListOf<EditWord>()
         fun len(l: List<EditWord>) = l.sumOf { it.text.length } + (l.size - 1).coerceAtLeast(0)

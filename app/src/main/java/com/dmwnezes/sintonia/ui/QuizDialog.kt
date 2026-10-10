@@ -207,14 +207,14 @@ private fun Question(s: QuizUi.Asking, onPick: (Track) -> Unit, onPlay: () -> Un
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) {
+                AppOutlinedButton(onClick = onPlay, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Rounded.PlayArrow, null, tint = Palette.ink)
                     Spacer(Modifier.width(4.dp))
                     Text("Ouvir", color = Palette.ink)
                 }
-                Button(
+                AppButton(
                     onClick = onNext, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
+                    containerColor = Palette.ink, contentColor = Palette.onInk,
                 ) { Text(if (s.round >= ROUNDS) "Ver resultado" else "Próxima") }
             }
         }
@@ -239,10 +239,10 @@ private fun Finished(s: QuizUi.Finished, onAgain: () -> Unit, onClose: () -> Uni
             color = Palette.ink.copy(alpha = 0.7f), fontSize = 15.sp,
         )
         Spacer(Modifier.height(28.dp))
-        Button(onClick = onAgain, colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk), modifier = Modifier.fillMaxWidth().height(50.dp)) {
+        AppButton(onClick = onAgain, containerColor = Palette.ink, contentColor = Palette.onInk, modifier = Modifier.fillMaxWidth().height(50.dp)) {
             Text("Jogar de novo", fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Fechar", color = Palette.ink) }
+        AppOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Fechar", color = Palette.ink) }
     }
 }

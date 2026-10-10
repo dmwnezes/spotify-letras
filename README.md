@@ -3,16 +3,22 @@
 App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
 
 - **Descobrir:** mix do dia com 30 músicas novas a partir do que você ouve, cartões para deslizar com prévia de 30 s, curtidas que vão para a playlist "Sintonia · Descobertas" no Spotify, e recomendações que aprendem com o que você curte ou pula.
-- **Estilo Edit:** a letra aparece como os "lyric edits" de reels: fundo preto, texto creme com brilho, palavras surgindo no tempo em blocos de 2–3, curvatura, rasgos de fita VHS e granulado. Dá para voltar ao estilo Clássico no menu ⋮.
+- **Estilos de letra animados** (menu ⋮ → Estilo da letra, ou em Ajustes):
+  - **Edit:** fundo preto, texto creme com brilho, palavras em blocos de 2–3, curvatura, rasgos de fita VHS e granulado.
+  - **Vidro:** fundo em gradiente com as cores da capa e a letra num cilindro 3D; a linha cantada fica nítida e as outras giram para longe, desfocadas.
+  - **Cilindro:** capa desfocada ao fundo e a letra rolando num cilindro, ondulando letra por letra; o que já foi cantado fica branco.
+  - **Colagem:** uma ou duas palavras gigantes por vez, cada trecho com um visual (bloco com aberração cromática, pincel, letras recortadas, contorno à mão, palavra no chão, letra riscada), com zoom, tremida e granulado de filme.
+  - **Clássico:** a lista de linhas com o visualizer.
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
 - **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
 - **Busca:** procure qualquer música e toque na hora ou coloque na fila.
+- **Botões:** pílulas com gradiente, brilho e sombra na cor da música, que afundam com mola ao tocar.
 - **Aparência:** tema claro, escuro ou automático (cores tiradas da capa) e fonte/tamanho da letra.
 - **Atalhos:** segure o ícone do app para abrir Letra, Buscar, Caderno ou Quiz.
 - **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha (feita no celular, grátis).
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
-- **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo Edit e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
+- **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo escolhido (Edit, Vidro, Cilindro ou Colagem) e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
 - **Compartilhar:** cartão "tocando agora" para Stories.
 - **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
 - **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas, uma retrospectiva em texto e outra animada estilo Stories. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
@@ -61,7 +67,7 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── AppGraph.kt            peças compartilhadas (login, Spotify, letras)
 ├── Playback.kt            o que está tocando, letra, cores e tradução
 ├── AppViewModel.kt        estado das telas e preferências
-├── edit/                  estilo Edit (blocos de palavras e desenho com brilho/VHS)
+├── edit/                  estilos animados da letra (Edit, Vidro, Cilindro, Colagem)
 ├── reco/                  recomendações (Deezer, pontuação, aprendizado, prévias)
 ├── live/                  notificação da tela de bloqueio e widget
 ├── translate/             tradução no celular (ML Kit)

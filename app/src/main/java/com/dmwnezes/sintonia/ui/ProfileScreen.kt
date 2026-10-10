@@ -94,18 +94,7 @@ fun ProfileScreen(
         item {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeRange.entries.forEach { r ->
-                    FilterChip(
-                        selected = r == range,
-                        onClick = { onRange(r) },
-                        label = { Text(r.label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Palette.ink.copy(alpha = 0.08f),
-                            labelColor = Palette.ink.copy(alpha = 0.8f),
-                            selectedContainerColor = Palette.ink,
-                            selectedLabelColor = Palette.onInk,
-                        ),
-                        border = null,
-                    )
+                    AppChip(r.label, selected = r == range, onClick = { onRange(r) })
                 }
             }
         }

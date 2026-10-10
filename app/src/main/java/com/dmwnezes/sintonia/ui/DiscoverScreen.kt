@@ -1,5 +1,7 @@
 package com.dmwnezes.sintonia.ui
 
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -118,13 +120,7 @@ fun DiscoverScreen(vm: DiscoverViewModel, accent: Color, onRelogin: () -> Unit, 
         }
         Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Para você", "Deslizar", "Curtidas (${data.likes.size})").forEachIndexed { i, label ->
-                FilterChip(
-                    selected = section == i, onClick = { section = i }, label = { Text(label) }, border = null,
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Palette.ink.copy(alpha = 0.08f), labelColor = Palette.ink.copy(alpha = 0.85f),
-                        selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
-                    ),
-                )
+                AppChip(label, selected = section == i, onClick = { section = i })
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomPadding.calculateBottomPadding())) {
@@ -191,13 +187,13 @@ private fun MixHeader(mix: List<RecoTrack>, accent: Color, loading: Boolean, onP
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onPlayAll, enabled = mix.isNotEmpty(), modifier = Modifier.weight(1.1f), contentPadding = PaddingValues(horizontal = 10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk)) {
+            AppButton(onClick = onPlayAll, enabled = mix.isNotEmpty(), modifier = Modifier.weight(1.1f), contentPadding = PaddingValues(horizontal = 10.dp),
+                containerColor = Palette.ink, contentColor = Palette.onInk) {
                 Icon(Icons.Rounded.PlayArrow, null)
                 Spacer(Modifier.width(4.dp))
                 Text("Tocar tudo", fontWeight = FontWeight.Bold, maxLines = 1)
             }
-            OutlinedButton(onClick = onNew, enabled = !loading, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 10.dp)) {
+            AppOutlinedButton(onClick = onNew, enabled = !loading, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 10.dp)) {
                 if (loading) CircularProgressIndicator(color = Palette.ink, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                 else Icon(Icons.Rounded.Refresh, null, tint = Palette.ink, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(4.dp))
@@ -346,11 +342,12 @@ private fun SwipeCardBody(
                 val active = pv.dzId == t.dzId
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilledIconButton(onClick = onPreview, modifier = Modifier.size(40.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)) {
-                        if (active && pv.loading) CircularProgressIndicator(color = Color.Black, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        else Icon(if (active && pv.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, "Prévia")
-                    }
+                    if (active && pv.loading) Box(Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.Black, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else GlassIconButton(
+                        if (active && pv.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, "Prévia", onPreview,
+                        size = 42.dp, tint = Color.White, selected = true,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) {
                         Box(Modifier.fillMaxWidth(if (active) pv.progress.coerceIn(0f, 1f) else 0f).height(4.dp).background(Color.White))
@@ -375,10 +372,18 @@ private fun Stamp(text: String, color: Color, alpha: Float, modifier: Modifier) 
 
 @Composable
 private fun RoundAction(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: Color, size: Int, onClick: () -> Unit) {
-    FilledIconButton(
-        onClick = onClick, modifier = Modifier.size(size.dp).shadow(8.dp, CircleShape),
-        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Palette.surface, contentColor = tint),
-    ) { Icon(icon, desc, modifier = Modifier.size((size * 0.45f).dp)) }
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val sc by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.88f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.4f), label = "acao")
+    Box(
+        Modifier.size(size.dp).graphicsLayer { scaleX = sc; scaleY = sc }
+            .shadow(14.dp, CircleShape, ambientColor = tint, spotColor = tint)
+            .clip(CircleShape)
+            .background(Brush.verticalGradient(listOf(lerp(Palette.surface, Color.White, 0.08f), Palette.surface)))
+            .border(1.5.dp, Brush.verticalGradient(listOf(tint.copy(alpha = 0.55f), tint.copy(alpha = 0.12f))), CircleShape)
+            .clickable(source, androidx.compose.material3.ripple(color = tint), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size((size * 0.45f).dp)) }
 }
 
 // ---------------- Curtidas ----------------
@@ -398,7 +403,7 @@ private fun Likes(vm: DiscoverViewModel, ui: DiscoverUi, data: RecoData, pv: Pre
                         "Para criar a playlist \"Sintonia · Descobertas\", o Spotify precisa de uma permissão nova. Entre de novo uma vez e aceite.",
                         color = Palette.ink.copy(alpha = 0.7f), fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp),
                     )
-                    Button(onClick = onRelogin, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1ED760), contentColor = Color.Black)) {
+                    AppButton(onClick = onRelogin, containerColor = Color(0xFF1ED760), contentColor = Color.Black) {
                         Text("Entrar de novo no Spotify", fontWeight = FontWeight.Bold)
                     }
                 } else {
@@ -407,7 +412,7 @@ private fun Likes(vm: DiscoverViewModel, ui: DiscoverUi, data: RecoData, pv: Pre
                         Switch(checked = ui.autoPlaylist, onCheckedChange = vm::setAutoPlaylist)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
-                        OutlinedButton(onClick = vm::saveAllLikes, enabled = likes.isNotEmpty() && ui.working == null) { Text("Salvar todas", color = Palette.ink) }
+                        AppOutlinedButton(onClick = vm::saveAllLikes, enabled = likes.isNotEmpty() && ui.working == null) { Text("Salvar todas", color = Palette.ink) }
                         if (ui.playlistId != null) TextButton(onClick = vm::openPlaylist) { Text("Abrir playlist", color = Palette.ink) }
                     }
                 }
@@ -456,6 +461,6 @@ private fun ErrorBox(msg: String, onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(msg, color = Palette.ink.copy(alpha = 0.8f), fontSize = 16.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onRetry) { Text("Tentar de novo", color = Palette.ink) }
+        AppOutlinedButton(onClick = onRetry) { Text("Tentar de novo", color = Palette.ink) }
     }
 }

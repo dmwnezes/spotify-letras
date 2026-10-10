@@ -107,18 +107,18 @@ fun LoginScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
-            Button(
+            AppButton(
                 onClick = { onSaveClientId(input); editing = false },
                 enabled = input.length >= 20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
+                containerColor = Palette.ink, contentColor = Palette.onInk,
             ) { Text("Salvar", fontWeight = FontWeight.Bold) }
         } else {
-            Button(
+            AppButton(
                 onClick = onLogin,
                 enabled = !loggingIn,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
+                containerColor = SpotifyGreen, contentColor = Color.Black,
             ) {
                 if (loggingIn) CircularProgressIndicator(color = Color.Black, modifier = Modifier.height(22.dp))
                 else Text("Entrar com Spotify", fontWeight = FontWeight.Bold, fontSize = 16.sp)

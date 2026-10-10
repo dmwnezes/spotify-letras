@@ -81,20 +81,20 @@ class ScreensRenderTest {
     private fun lyrics(light: Boolean, name: String, edit: Boolean = false) {
         rule.mainClock.autoAdvance = false
         val lines = listOf(
-            LyricLine(0, "I've been waiting for a long time"),
-            LyricLine(5000, "For this moment to come"),
-            LyricLine(9000, "I'm destined for anything at all"),
+            LyricLine(0, "The kettle hums a quiet tune"),
+            LyricLine(5000, "Paper boats along the street"),
+            LyricLine(9000, "We count the windows of the train"),
             LyricLine(14000, ""),
-            LyricLine(18000, "Every word you say to me"),
+            LyricLine(18000, "Orange light on Sunday floors"),
         )
-        val tr = listOf("Eu esperei por muito tempo", "Para este momento chegar", "Estou destinado a qualquer coisa", null, "Cada palavra que você me diz")
+        val tr = listOf("A chaleira cantarola baixinho", "Barquinhos de papel pela rua", "Contamos as janelas do trem", null, "Luz laranja no chão de domingo")
         val track = Track("x", "Song Name", listOf("Some Artist"), "Album", null, 200_000)
         val state = UiState(
             loggedIn = true, firstLoadDone = true,
             now = NowPlaying(track, true, 6200, SystemClock.elapsedRealtime()),
             lyrics = LyricsState.Ready(Lyrics.Synced(lines)),
             translation = TranslationState.Ready("inglês", tr),
-            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true, editStyle = edit,
+            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true, lyricsMode = if (edit) com.dmwnezes.sintonia.edit.LyricsMode.EDIT else com.dmwnezes.sintonia.edit.LyricsMode.CLASSICO,
         )
         rule.setContent {
             androidx.compose.runtime.CompositionLocalProvider(

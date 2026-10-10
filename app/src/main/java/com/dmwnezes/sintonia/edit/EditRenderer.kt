@@ -17,12 +17,12 @@ import kotlin.math.sin
  * leve curvatura, rasgos de fita VHS, granulado e um movimento suave.
  * Não depende de Compose: serve para a tela ao vivo e para gerar vídeo.
  */
-class EditRenderer(typeface: Typeface, private val density: Float) {
+class EditRenderer(typeface: Typeface, private val density: Float) : StyleRenderer {
 
     /** Altura (0–1) onde fica o centro do bloco de letra. No modo gravar ele desce para dar lugar à capa. */
-    var centerFraction = 0.42f
+    override var centerFraction = 0.42f
     /** Largura máxima do texto (0–1 da tela). */
-    var maxWidthFraction = 0.84f
+    override var maxWidthFraction = 0.84f
 
     companion object {
         val BG = Color.rgb(6, 5, 5)
@@ -45,6 +45,13 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
 
     /** Um rasgo de VHS: faixa horizontal deslocada. */
     private data class Tear(val y: Float, val height: Float, val dx: Float, val wave: Boolean)
+
+    private var pages: List<EditPage> = emptyList()
+
+    override fun setLines(lines: List<com.dmwnezes.sintonia.lyrics.LyricLine>) { pages = EditLayout.pages(lines) }
+
+    override fun draw(c: Canvas, w: Float, h: Float, posMs: Long, tSec: Float) =
+        draw(c, w, h, EditLayout.pageAt(pages, posMs), posMs, tSec)
 
     fun draw(c: Canvas, w: Float, h: Float, page: EditPage?, posMs: Long, tSec: Float) {
         c.drawColor(BG)

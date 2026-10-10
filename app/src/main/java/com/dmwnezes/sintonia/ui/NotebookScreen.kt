@@ -91,13 +91,7 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
             )
             Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Trechos (${data.lines.size})", "Diário (${data.diary.size})").forEachIndexed { i, label ->
-                    FilterChip(
-                        selected = tab == i, onClick = { tab = i }, label = { Text(label) }, border = null,
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Palette.ink.copy(alpha = 0.08f), labelColor = Palette.ink.copy(alpha = 0.8f),
-                            selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
-                        ),
-                    )
+                    AppChip(label, selected = tab == i, onClick = { tab = i })
                 }
             }
         }
@@ -110,10 +104,10 @@ fun NotebookScreen(currentTrack: Track?, positionMs: () -> Long, accent: Color, 
         } else {
             item {
                 if (currentTrack != null) {
-                    Button(
+                    AppButton(
                         onClick = { newNote = true },
                         modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
+                        containerColor = Palette.ink, contentColor = Palette.onInk,
                     ) {
                         Icon(Icons.Rounded.Add, null)
                         Spacer(Modifier.width(6.dp))

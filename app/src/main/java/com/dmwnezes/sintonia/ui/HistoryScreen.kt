@@ -108,16 +108,16 @@ fun HistoryScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(onClick = openPicker, enabled = !ui.importing, modifier = Modifier.weight(1f)) {
+                AppOutlinedButton(onClick = openPicker, enabled = !ui.importing, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Rounded.FileOpen, null, tint = Palette.ink, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Ler arquivo", color = Palette.ink)
                 }
-                Button(
+                AppButton(
                     onClick = { showExport = true },
                     enabled = ui.stats != null && !ui.importing,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
+                    containerColor = Palette.ink, contentColor = Palette.onInk,
                 ) {
                     Icon(Icons.Rounded.IosShare, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -214,10 +214,10 @@ private fun EmptyHistory(onPick: () -> Unit) {
                 color = Dim, fontSize = 13.sp,
             )
             Spacer(Modifier.height(14.dp))
-            Button(
+            AppButton(
                 onClick = onPick,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
+                containerColor = Palette.ink, contentColor = Palette.onInk,
             ) { Text("Ler arquivo do Spotify", fontWeight = FontWeight.Bold) }
         }
     }
@@ -250,16 +250,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
     item {
         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(listOf("all") + stats.years) { key ->
-                FilterChip(
-                    selected = key == p.key,
-                    onClick = { onSelect(key) },
-                    label = { Text(if (key == "all") "Tudo" else key) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Card, labelColor = Palette.ink.copy(alpha = 0.8f),
-                        selectedContainerColor = Palette.ink, selectedLabelColor = Palette.onInk,
-                    ),
-                    border = null,
-                )
+                AppChip(if (key == "all") "Tudo" else key, selected = key == p.key, onClick = { onSelect(key) })
             }
         }
     }
@@ -271,10 +262,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
         Panel(Modifier.padding(horizontal = 20.dp)) {
             Text(Retrospective.forPeriod(stats, p.key), color = Palette.ink.copy(alpha = 0.92f), fontSize = 15.sp, lineHeight = 22.sp)
             Spacer(Modifier.height(14.dp))
-            Button(
+            AppButton(
                 onClick = { onWrapped(p.key) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Color.Black),
+                containerColor = accent, contentColor = Color.Black,
             ) {
                 Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))

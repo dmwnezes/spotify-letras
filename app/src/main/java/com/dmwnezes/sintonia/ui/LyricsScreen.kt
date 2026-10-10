@@ -104,7 +104,8 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
-import com.dmwnezes.sintonia.edit.EditLyricsView
+import com.dmwnezes.sintonia.edit.LyricsMode
+import com.dmwnezes.sintonia.edit.StyledLyricsView
 import androidx.compose.runtime.CompositionLocalProvider
 import com.dmwnezes.sintonia.lyrics.WordTiming
 import androidx.compose.ui.text.SpanStyle
@@ -139,7 +140,7 @@ fun LyricsScreen(
     bottomPadding: PaddingValues,
     onSetKaraoke: (Boolean) -> Unit = {},
     onOpenSearch: () -> Unit = {},
-    onSetEditStyle: (Boolean) -> Unit = {},
+    onSetLyricsMode: (LyricsMode) -> Unit = {},
     onRecordMode: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -191,10 +192,18 @@ fun LyricsScreen(
     CompositionLocalProvider(LocalAppPalette provides if (editLines != null) DarkPalette else LocalAppPalette.current) {
     Box(Modifier.fillMaxSize()) {
         if (editLines != null) {
-            EditLyricsView(
+            StyledLyricsView(
+                mode = state.lyricsMode,
                 lines = editLines,
                 positionMs = { (nowForEdit?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offsetForEdit + 120 },
+                coverUrl = state.now?.track?.imageUrl,
+                colors = state.colors,
             )
+            // Sombra suave em cima e embaixo: o cabeçalho e os controles ficam legíveis em qualquer estilo.
+            Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = 0.55f), 0.16f to Color.Transparent,
+                0.74f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f),
+            )))
         } else {
             VisualizerCanvas(
                 colors = state.colors,
@@ -245,8 +254,8 @@ fun LyricsScreen(
                         onSetTheme = onSetVizTheme,
                         karaoke = state.karaoke,
                         onSetKaraoke = onSetKaraoke,
-                        editStyle = state.editStyle,
-                        onSetEditStyle = onSetEditStyle,
+                        lyricsMode = state.lyricsMode,
+                        onSetLyricsMode = onSetLyricsMode,
                         onTune = { showTune = !showTune },
                         onNote = { noteFor = now.positionAt(SystemClock.elapsedRealtime()) },
                         onSearch = onOpenSearch,
@@ -280,6 +289,7 @@ fun LyricsScreen(
                         onTogglePlay = onTogglePlay,
                         onNext = onNext,
                         onPrevious = onPrevious,
+                        glow = state.colors.glow1,
                     )
                 }
             }
@@ -335,10 +345,10 @@ private fun NothingPlaying(onOpenSearch: () -> Unit) {
             color = Palette.ink.copy(alpha = 0.7f), fontSize = 16.sp,
         )
         Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = onOpenSearch) {
-            Icon(Icons.Rounded.Search, null, tint = Palette.ink)
+        AppButton(onClick = onOpenSearch) {
+            Icon(Icons.Rounded.Search, null)
             Spacer(Modifier.width(6.dp))
-            Text("Buscar uma música", color = Palette.ink)
+            Text("Buscar uma música")
         }
         TextButton(onClick = {
             context.packageManager.getLaunchIntentForPackage("com.spotify.music")?.let(context::startActivity)
@@ -360,8 +370,8 @@ private fun TrackHeader(
     onSetTheme: (VizTheme) -> Unit,
     karaoke: Boolean,
     onSetKaraoke: (Boolean) -> Unit,
-    editStyle: Boolean,
-    onSetEditStyle: (Boolean) -> Unit,
+    lyricsMode: LyricsMode,
+    onSetLyricsMode: (LyricsMode) -> Unit,
     onTune: () -> Unit,
     onNote: () -> Unit,
     onSearch: () -> Unit,
@@ -384,27 +394,20 @@ private fun TrackHeader(
                     Text(track.artistLine, color = Palette.ink.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (translation != TranslationState.None) {
-                    IconButton(onClick = onToggleTranslation) {
-                        Box(
-                            Modifier.size(36.dp).clip(CircleShape)
-                                .background(if (showTranslation) Palette.ink else Color.Transparent),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Rounded.Translate,
-                                contentDescription = if (showTranslation) "Esconder tradução" else "Mostrar tradução",
-                                tint = if (showTranslation) Palette.onInk else Palette.ink.copy(alpha = 0.8f),
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
+                    GlassIconButton(
+                        Icons.Rounded.Translate,
+                        contentDescription = if (showTranslation) "Esconder tradução" else "Mostrar tradução",
+                        onClick = onToggleTranslation, size = 40.dp, selected = showTranslation,
+                    )
+                    Spacer(Modifier.width(8.dp))
                 }
             } else {
                 Spacer(Modifier.weight(1f))
             }
-            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Buscar música", tint = Palette.ink) }
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Mais opções", tint = Palette.ink) }
+            GlassIconButton(Icons.Rounded.Search, "Buscar música", onSearch, size = 40.dp)
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.padding(end = 12.dp)) {
+                GlassIconButton(Icons.Rounded.MoreVert, "Mais opções", { menu = true }, size = 40.dp)
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
                         text = { Text("Modo gravar para Stories") },
@@ -421,8 +424,7 @@ private fun TrackHeader(
                         MenuCheck("Acender palavra por palavra", karaoke) { onSetKaraoke(!karaoke); menu = false }
                         HorizontalDivider()
                         Text("Estilo da letra", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                        MenuCheck("Edit (estilo reel)", editStyle) { onSetEditStyle(true); menu = false }
-                        MenuCheck("Clássico", !editStyle) { onSetEditStyle(false); menu = false }
+                        LyricsMode.entries.forEach { m -> MenuCheck(m.label, m == lyricsMode) { onSetLyricsMode(m); menu = false } }
                     }
                     HorizontalDivider()
                     Text("Visualizer", fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
@@ -711,6 +713,7 @@ private fun PlayerControls(
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    glow: Color = Color.White,
 ) {
     val duration = now.track?.durationMs ?: 1L
     var pos by remember { mutableLongStateOf(now.positionAt(SystemClock.elapsedRealtime())) }
@@ -740,35 +743,21 @@ private fun PlayerControls(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onTogglePlayerOnly) {
-                Icon(
-                    if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
-                    contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
-                    tint = Palette.ink.copy(alpha = 0.85f),
-                )
-            }
+            GlassIconButton(
+                if (playerOnly) Icons.Rounded.Lyrics else Icons.Rounded.Album,
+                contentDescription = if (playerOnly) "Mostrar letra" else "Só o player",
+                onClick = onTogglePlayerOnly,
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipPrevious, "Anterior", tint = Palette.ink, modifier = Modifier.size(36.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                FilledIconButton(
-                    onClick = onTogglePlay,
-                    modifier = Modifier.size(64.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Palette.ink, contentColor = Palette.onInk),
-                ) {
-                    Icon(if (now.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (now.isPlaying) "Pausar" else "Tocar", modifier = Modifier.size(36.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipNext, "Próxima", tint = Palette.ink, modifier = Modifier.size(36.dp))
-                }
+                BareIconButton(Icons.Rounded.SkipPrevious, "Anterior", onPrevious)
+                Spacer(Modifier.width(10.dp))
+                PlayButton(playing = now.isPlaying, onClick = onTogglePlay, glow = glow)
+                Spacer(Modifier.width(10.dp))
+                BareIconButton(Icons.Rounded.SkipNext, "Próxima", onNext)
             }
             Box {
                 var shareMenu by remember { mutableStateOf(false) }
-                IconButton(onClick = { shareMenu = true }) {
-                    Icon(Icons.Rounded.IosShare, contentDescription = "Compartilhar", tint = Palette.ink.copy(alpha = 0.85f))
-                }
+                GlassIconButton(Icons.Rounded.IosShare, "Compartilhar", onClick = { shareMenu = true })
                 DropdownMenu(expanded = shareMenu, onDismissRequest = { shareMenu = false }) {
                     DropdownMenuItem(
                         text = { Text("Cartão para Stories") },

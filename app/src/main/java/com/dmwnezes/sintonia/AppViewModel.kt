@@ -45,13 +45,16 @@ data class UiState(
     val playerOnly: Boolean = false,
     val showTranslation: Boolean = true,
     val karaoke: Boolean = true,
-    val editStyle: Boolean = true,
+    val lyricsMode: com.dmwnezes.sintonia.edit.LyricsMode = com.dmwnezes.sintonia.edit.LyricsMode.EDIT,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val lyricsStyle: LyricsStyle = LyricsStyle(),
     val liveLyrics: Boolean = false,
     val lyricsOffsetMs: Long = 0,
     val message: String? = null,
-)
+) {
+    /** Letra num dos estilos animados (não o Clássico). */
+    val editStyle: Boolean get() = lyricsMode.animated
+}
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -87,7 +90,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         playerOnly = prefs.playerOnly,
         showTranslation = prefs.showTranslation,
         karaoke = prefs.karaoke,
-        editStyle = prefs.lyricsMode == "EDIT",
+        lyricsMode = com.dmwnezes.sintonia.edit.LyricsMode.from(prefs.lyricsMode),
         themeMode = ThemeMode.from(prefs.themeMode),
         lyricsStyle = LyricsStyle(LyricsFont.from(prefs.lyricsFont), prefs.lyricsScale),
         liveLyrics = prefs.liveLyrics,
@@ -198,9 +201,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _local.update { it.copy(lyricsStyle = st) }
     }
 
-    fun setEditStyle(on: Boolean) {
-        prefs.lyricsMode = if (on) "EDIT" else "CLASSICO"
-        _local.update { it.copy(editStyle = on) }
+    fun setLyricsMode(m: com.dmwnezes.sintonia.edit.LyricsMode) {
+        prefs.lyricsMode = m.name
+        _local.update { it.copy(lyricsMode = m) }
     }
 
     fun setKaraoke(on: Boolean) {
