@@ -108,6 +108,7 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
             reason == "PREMIUM_REQUIRED" -> "Esse controle exige Spotify Premium."
             code == 403 -> "O Spotify recusou o acesso. Confira se sua conta está em \"User Management\" no painel do app."
             code == 429 -> "Muitas consultas seguidas. Aguarde alguns segundos."
+            code == 400 -> "O Spotify não aceitou o pedido (400)." + (msg.takeIf { it.isNotBlank() }?.let { " $it" } ?: "")
             else -> "Erro do Spotify ($code)"
         }
     }
@@ -223,9 +224,21 @@ class SpotifyClient(private val prefs: Prefs, private val http: OkHttpClient) {
 
     /** Busca músicas pelo nome, artista ou trecho. */
     suspend fun search(query: String): List<Track> {
-        val q = java.net.URLEncoder.encode(query, "UTF-8")
-        val json = JSONObject(call("GET", "/search?type=track&limit=25&market=from_token&q=$q") ?: "{}")
-        return json.optJSONObject("tracks")?.optJSONArray("items").objects().map(::parseTrack)
+        val q = java.net.URLEncoder.encode(query.trim(), "UTF-8")
+        // Apps em modo de desenvolvimento só podem pedir até 10 resultados por busca (acima disso o Spotify devolve 400).
+        // Se ainda assim recusar, tenta de novo de forma mais simples.
+        val attempts = listOf("limit=10&market=from_token", "limit=10", "limit=5")
+        var last: Exception? = null
+        for (params in attempts) {
+            try {
+                val json = JSONObject(call("GET", "/search?type=track&$params&q=$q") ?: "{}")
+                return json.optJSONObject("tracks")?.optJSONArray("items").objects().map(::parseTrack)
+            } catch (e: SpotifyException) {
+                if (e.code != 400) throw e
+                last = e
+            }
+        }
+        throw last ?: SpotifyException(400, "Não consegui buscar agora.")
     }
 
     // ---------- Perfil ----------
