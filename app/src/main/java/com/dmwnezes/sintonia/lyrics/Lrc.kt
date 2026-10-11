@@ -3,8 +3,70 @@ package com.dmwnezes.sintonia.lyrics
 /** Uma palavra (com o espaço que vem depois dela) e quando começa a ser cantada. */
 data class Word(val startMs: Long, val text: String)
 
-/** [words] só existe quando a letra tem marcação palavra por palavra. */
-data class LyricLine(val timeMs: Long, val text: String, val words: List<Word>? = null)
+/**
+ * [words] só existe quando a letra tem marcação palavra por palavra.
+ * [backing] são os backing vocals (o que vinha entre parênteses), já sem os parênteses;
+ * [backingAt] diz onde eles apareciam na linha (0 = no começo, 1 = no fim) e [backingWords] o tempo de cada palavra, se houver.
+ */
+data class LyricLine(
+    val timeMs: Long,
+    val text: String,
+    val words: List<Word>? = null,
+    val backing: String? = null,
+    val backingAt: Float = 1f,
+    val backingWords: List<Word>? = null,
+) {
+    /** Linha só de backing vocal (tudo estava entre parênteses). */
+    val backingOnly: Boolean get() = text.isBlank() && !backing.isNullOrBlank()
+}
+
+/** Separa os backing vocals — o que está entre ( ) — da linha principal, como no Apple Music. */
+object BackingVocals {
+    private val paren = Regex("""\(([^()]*)\)""")
+
+    fun split(line: LyricLine): LyricLine {
+        if ('(' !in line.text) return line
+        val found = paren.findAll(line.text).toList()
+        if (found.isEmpty()) return line
+        val backing = found.map { it.groupValues[1].trim() }.filter { it.isNotEmpty() }.joinToString(" ")
+        val main = paren.replace(line.text, " ").replace(Regex("""\s+"""), " ").trim()
+            .trim(',', ' ').replace(Regex("""\s+([,.!?])"""), "$1")
+        val at = found.first().range.first.toFloat() / line.text.length.coerceAtLeast(1)
+        // Com tempo por palavra: as palavras dentro dos parênteses vão para o backing.
+        var mainWords: List<Word>? = null
+        var backWords: List<Word>? = null
+        line.words?.let { ws ->
+            val m = mutableListOf<Word>(); val b = mutableListOf<Word>()
+            var depth = 0
+            for (w in ws) {
+                val t = w.text
+                val opens = t.count { it == '(' }; val closes = t.count { it == ')' }
+                val inside = depth > 0 || opens > 0
+                val clean = t.replace("(", "").replace(")", "")
+                if (clean.isNotBlank()) (if (inside) b else m) += w.copy(text = clean)
+                depth = (depth + opens - closes).coerceAtLeast(0)
+            }
+            mainWords = m.ifEmpty { null }; backWords = b.ifEmpty { null }
+        }
+        if (backing.isEmpty()) return line.copy(text = main, words = mainWords ?: line.words)
+        return line.copy(text = main, words = mainWords, backing = backing, backingAt = at, backingWords = backWords)
+    }
+
+    /** Tempo de cada palavra do backing: o real, se houver; senão, estimado logo depois (ou junto) da parte principal. */
+    fun spans(line: LyricLine, nextLineMs: Long?): List<WordTiming.Span> {
+        val text = line.backing ?: return emptyList()
+        if (line.backingWords != null) return WordTiming.spans(LyricLine(line.timeMs, text, line.backingWords), nextLineMs)
+        val end = nextLineMs ?: (line.timeMs + 5000)
+        val mainEnd = if (line.text.isBlank()) line.timeMs
+            else WordTiming.spans(line.copy(backing = null), nextLineMs).lastOrNull()?.endMs ?: line.timeMs
+        val start = when {
+            line.backingOnly -> line.timeMs
+            line.backingAt < 0.3f -> line.timeMs                    // "(eco) frase": canta junto no começo
+            else -> (mainEnd - 250).coerceIn(line.timeMs, (end - 400).coerceAtLeast(line.timeMs))
+        }
+        return WordTiming.spans(LyricLine(start, text), end)
+    }
+}
 
 sealed interface Lyrics {
     data class Synced(val lines: List<LyricLine>) : Lyrics
@@ -48,7 +110,7 @@ object LrcParser {
             val (text, words) = parseWords(rest, offset)
             for (t in stamps) out += LyricLine((t - offset).coerceAtLeast(0), text, words)
         }
-        return out.sortedBy { it.timeMs }
+        return out.sortedBy { it.timeMs }.map(BackingVocals::split)
     }
 
     /** Separa as marcações <mm:ss.xx> de cada palavra; devolve o texto limpo e as palavras (ou null). */

@@ -65,6 +65,29 @@ class LyricStylesTest {
 
     private val times = listOf(1_150L, 2_200L, 3_400L, 4_750L, 5_300L, 8_400L, 9_600L, 11_550L, 12_300L, 14_400L)
 
+    // Letra inventada com backing vocals entre parênteses.
+    private val withBacking = com.dmwnezes.sintonia.lyrics.LrcParser.parse(
+        "[00:01.00]eu vou ficar aqui (ficar aqui)\n[00:05.00]a cidade acorda devagar\n[00:08.00](uh-uh, uh-uh)\n[00:10.00]guarda esse momento"
+    )
+
+    @Test fun backingVocals() {
+        val out = File("build/frames/styles").apply { mkdirs() }
+        val rs = listOf(
+            "edit" to com.dmwnezes.sintonia.edit.EditRenderer(font("montserrat"), 1.5f),
+            "vidro" to VidroRenderer(font("inter"), 1.5f),
+            "cilindro" to CilindroRenderer(font("montserrat"), 1.5f),
+            "colagem" to ColagemRenderer(font("archivo"), font("playfair"), font("montserrat"), 1.5f),
+        )
+        for ((name, r) in rs) {
+            r.setLines(withBacking); r.setArt(art)
+            listOf(3_900L, 8_600L).forEachIndexed { i, pos ->
+                val bmp = Bitmap.createBitmap(540, 960, Bitmap.Config.ARGB_8888)
+                r.draw(Canvas(bmp), 540f, 960f, pos, pos / 1000f)
+                File(out, "backing-$name-$i.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+        }
+    }
+
     @Test fun vidro() = render("vidro", VidroRenderer(font("inter"), 1.5f), times)
     @Test fun cilindro() = render("cilindro", CilindroRenderer(font("montserrat"), 1.5f), times)
     @Test fun colagemLooks() {

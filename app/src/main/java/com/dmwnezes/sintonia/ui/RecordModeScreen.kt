@@ -165,18 +165,21 @@ private fun RecordContent(state: UiState, dim: Boolean) {
         // Celulares são mais altos que 9:16; o Instagram corta o que sobra em cima e embaixo.
         val frameW = if (maxWidth * 16f / 9f <= maxHeight) maxWidth else maxHeight * 9f / 16f
         val frameH = frameW * 16f / 9f
+        // O fundo animado ocupa a tela inteira; só o texto fica dentro do quadro dos Stories.
+        if (lines != null) {
+            val frameTop = (maxHeight - frameH) / 2
+            StyledLyricsView(
+                mode = recordStyle(state.lyricsMode),
+                lines = lines,
+                positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
+                coverUrl = track?.imageUrl,
+                colors = state.colors,
+                centerFraction = (frameTop + frameH * 0.605f) / maxHeight,
+                maxWidthFraction = (frameW * 0.74f) / maxWidth,
+                modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
+            )
+        }
         Box(Modifier.size(frameW, frameH).graphicsLayer { alpha = if (dim) 0.35f else 1f }) {
-            if (lines != null) {
-                StyledLyricsView(
-                    mode = recordStyle(state.lyricsMode),
-                    lines = lines,
-                    positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                    coverUrl = track?.imageUrl,
-                    colors = state.colors,
-                    centerFraction = 0.605f,
-                    maxWidthFraction = 0.74f,
-                )
-            }
             Column(
                 Modifier.fillMaxWidth().padding(top = frameH * (SAFE_TOP + 0.01f), start = 32.dp, end = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,

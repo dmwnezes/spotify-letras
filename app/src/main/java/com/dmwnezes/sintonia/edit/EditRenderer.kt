@@ -76,6 +76,8 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
         text.textSize = size
         val widest = page.chunks.maxOf { text.measureText(it.text) }
         if (widest > w * maxWidthFraction) size *= (w * maxWidthFraction) / widest
+        // Bloco só de backing vocal: menor, como um eco.
+        if (page.backingOnly) size *= 0.62f
         text.textSize = size
         text.setShadowLayer(size * 0.30f, 0f, 0f, Color.argb(185, 255, 204, 145))
 
@@ -116,7 +118,40 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
             line.strokeWidth = 0.8f * density
             c.drawLine(-w, tear.y + tear.height, w * 2, tear.y + tear.height, line)
         }
+        if (page.backing.isNotEmpty()) drawBacking(c, w, page.backing, top + blockH + size * 0.22f, size, posMs, exit)
         c.restore()
+        text.textSkewX = 0f
+    }
+
+    /** Backing vocals embaixo do bloco: menores, mais apagados, acendendo palavra por palavra (sem parênteses). */
+    private fun drawBacking(c: Canvas, w: Float, words: List<EditWord>, top: Float, mainSize: Float, posMs: Long, exit: Float) {
+        val bs = mainSize * 0.42f
+        text.textSize = bs
+        text.textSkewX = -0.12f
+        text.setShadowLayer(bs * 0.25f, 0f, 0f, Color.argb(120, 255, 204, 145))
+        val space = text.measureText(" ")
+        val maxW = w * maxWidthFraction
+        // Quebra em linhas que cabem na largura.
+        val rows = mutableListOf<MutableList<EditWord>>(mutableListOf())
+        var x = 0f
+        for (wd in words) {
+            val ww = text.measureText(wd.text)
+            if (rows.last().isNotEmpty() && x + ww > maxW) { rows += mutableListOf<EditWord>(); x = 0f }
+            rows.last() += wd; x += ww + space
+        }
+        rows.forEachIndexed { r, row ->
+            val rowW = row.sumOf { text.measureText(it.text).toDouble() }.toFloat() + space * (row.size - 1)
+            var xx = (w - rowW) / 2
+            val y = top + bs * (1.1f + r * 1.15f)
+            row.forEach { wd ->
+                val p = ((posMs - wd.startMs) / REVEAL_MS).coerceIn(0f, 1f)
+                val ease = 1f - (1f - p) * (1f - p)
+                val bright = 0.45f + 0.55f * ease
+                text.color = Color.argb((255 * (0.35f + 0.5f * ease) * exit).toInt(), (242 * bright).toInt(), (226 * bright).toInt(), (202 * bright).toInt())
+                c.drawText(wd.text, xx, y, text)
+                xx += text.measureText(wd.text) + space
+            }
+        }
     }
 
     private fun drawChunks(

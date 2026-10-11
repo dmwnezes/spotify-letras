@@ -88,8 +88,12 @@ class VidroRenderer(typeface: Typeface, private val density: Float) : StyleRende
             text.textSkewX = if (rnd(line.seed) < 0.3f) -0.2f else 0f
             val isCur = row.line == f.current
             val passed = row.line < f.current
+            // Backing vocal: menor, em itálico e mais apagado, logo abaixo da linha.
+            val bk = row.backing
+            text.textSize = if (bk) size * BACKING_SCALE else size
+            if (bk) text.textSkewX = -0.15f
             row.words.forEachIndexed { k, wi ->
-                val word = line.words[wi]
+                val word = if (bk && !line.backingOnly) line.backing[wi] else line.words[wi]
                 val x = left + row.xs[k]
                 // Desfoque: mais longe do centro (em cima/embaixo e para a direita) = mais desfocado.
                 val far = (row.xs[k] / (w * maxWidthFraction)).coerceIn(0f, 1f)
@@ -102,10 +106,11 @@ class VidroRenderer(typeface: Typeface, private val density: Float) : StyleRende
                 } else {
                     alpha = if (passed) 0.62f else 0.48f
                 }
-                alpha *= depth * depth
+                alpha *= depth * depth * (if (bk) 0.8f else 1f)
                 if (alpha < 0.02f) return@forEachIndexed
                 drawSoft(c, word.text, x, baseY, blur, motion * depth, alpha, sharp = isCur && blur < size * 0.02f)
             }
+            text.textSize = size
             c.restore()
         }
     }
@@ -139,7 +144,7 @@ class VidroRenderer(typeface: Typeface, private val density: Float) : StyleRende
             size = min(w * 0.118f, h * 0.074f) * min(1f, maxWidthFraction / 0.86f)
             text.textSize = size
             val space = text.measureText(" ")
-            layout = ScrollLayout.build(lines, w * maxWidthFraction, size * 1.08f, size * 0.42f, space) { l, i -> text.measureText(l.words[i].text) }
+            layout = ScrollLayout.build(lines, w * maxWidthFraction, size * 1.08f, size * 0.42f, space) { l, i -> text.measureText(l.wordAt(i).text) }
             layoutKey = key
         }
         return layout

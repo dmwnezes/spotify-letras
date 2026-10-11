@@ -97,17 +97,19 @@ class CilindroRenderer(typeface: Typeface, private val density: Float) : StyleRe
             val phase = tSec * 1.6f + row.line * 0.9f
             val cx = left + row.width / 2
 
+            val bk = row.backing
             row.words.forEachIndexed { k, wi ->
-                val word = line.words[wi]
-                val p = paintFor(line, wi)
-                p.textSize = size * grow
+                val word = if (bk && !line.backingOnly) line.backing[wi] else line.words[wi]
+                val p = if (bk) semi else paintFor(line, wi)
+                // Backing vocal: menor e mais apagado, logo abaixo da linha.
+                p.textSize = size * grow * (if (bk) BACKING_SCALE else 1f)
                 val sung = ((posMs - word.startMs) / REVEAL_MS).coerceIn(0f, 1f)
                 val grey = when {
                     isCur -> 150 + (105 * easeOut(sung)).toInt()
                     row.line < f.current -> 150
                     else -> 125
                 }
-                val alpha = (255 * depth * depth * (if (isCur) 1f else 0.85f)).toInt()
+                val alpha = (255 * depth * depth * (if (isCur) 1f else 0.85f) * (if (bk) 0.75f else 1f)).toInt()
                 if (alpha < 4) return@forEachIndexed
                 p.color = Color.argb(alpha, grey, grey, grey)
                 p.setShadowLayer(size * 0.08f, 0f, size * 0.03f, Color.argb(alpha / 2, 0, 0, 0))
@@ -167,7 +169,7 @@ class CilindroRenderer(typeface: Typeface, private val density: Float) : StyleRe
             size = min(w * 0.094f, h * 0.06f) * min(1f, maxWidthFraction / 0.88f)
             bold.textSize = size; semi.textSize = size
             val space = bold.measureText(" ")
-            layout = ScrollLayout.build(lines, w * maxWidthFraction, size * 1.05f, size * 0.55f, space) { l, i -> paintFor(l, i).measureText(l.words[i].text) }
+            layout = ScrollLayout.build(lines, w * maxWidthFraction, size * 1.05f, size * 0.55f, space) { l, i -> (if (i < l.words.size && !l.backingOnly) paintFor(l, i) else semi).measureText(l.wordAt(i).text) }
             layoutKey = key
         }
         return layout

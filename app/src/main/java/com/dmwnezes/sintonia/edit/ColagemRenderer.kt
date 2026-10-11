@@ -31,7 +31,12 @@ class ColagemRenderer(
 
     private enum class Look { BLOCO, PINCEL, RECORTE, CONTORNO, CHAO, RISCADO }
 
-    private class Beat(val words: List<EditWord>, val startMs: Long, val endMs: Long, val look: Look, val seed: Int)
+    private class Beat(
+        val words: List<EditWord>, val startMs: Long, val endMs: Long, val look: Look, val seed: Int,
+        val backing: List<EditWord> = emptyList(), val backingOnly: Boolean = false,
+    ) {
+        fun until(end: Long) = Beat(words, startMs, end, look, seed, backing, backingOnly)
+    }
 
     private companion object {
         const val ENTER_MS = 230f
@@ -84,10 +89,13 @@ class ColagemRenderer(
             val words = line.words.map { EditWord(it.text, it.startMs, it.endMs) }
             val chunks = EditLayout.chunk(words, maxChars = 11, maxWords = 2)
             val nextLine = sung.getOrNull(li + 1)?.startMs
+            val backing = line.backing.map { EditWord(it.text, it.startMs, it.endMs) }
             chunks.forEachIndexed { ci, ch ->
                 val start = ch.words.first().startMs
+                val isLast = ci == chunks.lastIndex
+                val sungUntil = maxOf(ch.words.last().endMs, if (isLast) backing.lastOrNull()?.endMs ?: 0L else 0L)
                 val end = chunks.getOrNull(ci + 1)?.words?.first()?.startMs
-                    ?: min(nextLine ?: Long.MAX_VALUE, ch.words.last().endMs + HOLD_MS)
+                    ?: min(nextLine ?: Long.MAX_VALUE, sungUntil + HOLD_MS)
                 val seed = line.seed * 31 + ci * 977
                 val letters = ch.text.count { it.isLetterOrDigit() }
                 var look: Look
@@ -98,10 +106,10 @@ class ColagemRenderer(
                 } while ((look == prev || (look == Look.RECORTE && letters > 9)) && k < 12)
                 if (forcedLook >= 0) look = Look.entries[forcedLook % Look.entries.size]
                 prev = look
-                out += Beat(ch.words, start, end, look, seed)
+                out += Beat(ch.words, start, end, look, seed, if (isLast) backing else emptyList(), line.backingOnly)
             }
         }
-        beats = out.mapIndexed { i, b -> if (i + 1 < out.size && b.endMs > out[i + 1].startMs) Beat(b.words, b.startMs, out[i + 1].startMs, b.look, b.seed) else b }
+        beats = out.mapIndexed { i, b -> if (i + 1 < out.size && b.endMs > out[i + 1].startMs) b.until(out[i + 1].startMs) else b }
     }
 
     private fun beatAt(pos: Long): Beat? {
@@ -143,8 +151,11 @@ class ColagemRenderer(
         val cx = w / 2; val cy = h * centerFraction
         val push = 1f + 0.06f * min(1f, lt / 1800f)
         val alpha = exit
+        if (b.backing.isNotEmpty()) drawBacking(c, w, h, b, pos, alpha)
+        // Trecho só de backing vocal: tudo menor, como um eco.
+        if (b.backingOnly) { c.save(); c.scale(0.6f, 0.6f, cx, cy) }
         if (b.look == Look.CHAO) {
-            drawChao(c, w, h, b, pos, e, alpha); return
+            drawChao(c, w, h, b, pos, e, alpha); if (b.backingOnly) c.restore(); return
         }
         // Rastro do zoom: cópias maiores e transparentes.
         if (e < 1f) {
@@ -160,6 +171,39 @@ class ColagemRenderer(
         if (b.look == Look.PINCEL) c.rotate(-4f + 2f * rnd(b.seed), cx, cy)
         drawLook(c, w, h, b, pos, alpha, ghost = false, aberr = (1 - e))
         c.restore()
+        if (b.backingOnly) c.restore()
+    }
+
+    private val backPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = montserrat; fontVariationSettings = "'wght' 700"; textAlign = Paint.Align.LEFT; textSkewX = -0.15f
+    }
+
+    /** Backing vocals embaixo das palavras grandes: menores, em itálico, acendendo conforme são cantados. */
+    private fun drawBacking(c: Canvas, w: Float, h: Float, b: Beat, pos: Long, alpha: Float) {
+        val light = b.look == Look.CONTORNO || b.look == Look.RISCADO
+        val ink = if (light) Color.rgb(43, 37, 34) else CREAM
+        val size = min(w * 0.058f, h * 0.034f)
+        backPaint.textSize = size
+        val space = backPaint.measureText(" ")
+        val maxW = w * maxWidthFraction
+        val rows = mutableListOf<MutableList<EditWord>>(mutableListOf()); var x = 0f
+        for (wd in b.backing) {
+            val ww = backPaint.measureText(wd.text.lowercase())
+            if (rows.last().isNotEmpty() && x + ww > maxW) { rows += mutableListOf<EditWord>(); x = 0f }
+            rows.last() += wd; x += ww + space
+        }
+        val top = h * centerFraction + h * 0.28f
+        rows.forEachIndexed { r, row ->
+            val rowW = row.sumOf { backPaint.measureText(it.text.lowercase()).toDouble() }.toFloat() + space * (row.size - 1)
+            var xx = (w - rowW) / 2
+            row.forEach { wd ->
+                val p = ((pos - wd.startMs) / POP_MS).coerceIn(0f, 1f)
+                backPaint.color = ink
+                backPaint.alpha = (255 * alpha * (0.35f + 0.6f * easeOut(p))).toInt()
+                c.drawText(wd.text.lowercase(), xx, top + r * size * 1.25f, backPaint)
+                xx += backPaint.measureText(wd.text.lowercase()) + space
+            }
+        }
     }
 
     private fun upper(s: String) = s.uppercase()

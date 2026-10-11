@@ -10,6 +10,7 @@ App Android que mostra a letra da música que está tocando no Spotify, sincroni
   - **Colagem:** uma ou duas palavras gigantes por vez, cada trecho com um visual (bloco com aberração cromática, pincel, letras recortadas, contorno à mão, palavra no chão, letra riscada), com zoom, tremida e granulado de filme.
   - **Clássico:** a lista de linhas com o visualizer.
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
+- **Backing vocals:** o que vem entre parênteses na letra aparece sem os parênteses, menor e logo abaixo da linha principal (como no Apple Music), em todos os estilos.
 - **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
 - **Buscar (aba própria):** procure qualquer música e toque no Spotify na hora (se o Spotify estiver fechado, o app abre ele direto na música) ou coloque na fila; guarda as buscas recentes.
 - **Barra de tempo:** arraste ou toque na barra do player para pular para qualquer parte da música.

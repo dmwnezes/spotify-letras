@@ -1,5 +1,6 @@
 package com.dmwnezes.sintonia.edit
 
+import com.dmwnezes.sintonia.lyrics.BackingVocals
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.WordTiming
 
@@ -11,8 +12,17 @@ data class EditChunk(val words: List<EditWord>) {
     val text: String get() = words.joinToString(" ") { it.text }
 }
 
-/** Um bloco de até 3 pedaços empilhados; a tela limpa quando muda de bloco. */
-data class EditPage(val chunks: List<EditChunk>, val startMs: Long, val endMs: Long)
+/**
+ * Um bloco de até 3 pedaços empilhados; a tela limpa quando muda de bloco.
+ * [backing] são os backing vocals que aparecem embaixo, menores; [backingOnly] = o bloco inteiro é backing vocal.
+ */
+data class EditPage(
+    val chunks: List<EditChunk>,
+    val startMs: Long,
+    val endMs: Long,
+    val backing: List<EditWord> = emptyList(),
+    val backingOnly: Boolean = false,
+)
 
 /**
  * Transforma a letra sincronizada no formato dos "lyric edits":
@@ -35,16 +45,28 @@ object EditLayout {
     fun pages(lines: List<LyricLine>): List<EditPage> {
         val out = mutableListOf<EditPage>()
         lines.forEachIndexed { i, line ->
-            if (line.text.isBlank()) return@forEachIndexed
+            if (line.text.isBlank() && !line.backingOnly) return@forEachIndexed
             val next = lines.drop(i + 1).firstOrNull()?.timeMs
-            val words = WordTiming.spans(line, next).map { EditWord(it.text.trim(), it.startMs, it.endMs) }.filter { it.text.isNotEmpty() }
+            val backing = BackingVocals.spans(line, next).map { EditWord(it.text.trim(), it.startMs, it.endMs) }.filter { it.text.isNotEmpty() }
+            if (line.backingOnly) {
+                // Linha só de backing vocal: vira um bloco próprio, desenhado menor.
+                chunk(backing).chunked(MAX_CHUNKS).forEach { group ->
+                    val start = group.first().words.first().startMs
+                    out += EditPage(group, start, minOf(next ?: Long.MAX_VALUE, group.last().words.last().endMs + HOLD_MS), backingOnly = true)
+                }
+                return@forEachIndexed
+            }
+            val words = WordTiming.spans(line.copy(backing = null), next).map { EditWord(it.text.trim(), it.startMs, it.endMs) }.filter { it.text.isNotEmpty() }
             val chunks = chunk(words)
             val groups = chunks.chunked(MAX_CHUNKS)
             groups.forEachIndexed { g, group ->
                 val start = group.first().words.first().startMs
-                val endOfGroup = if (g + 1 < groups.size) groups[g + 1].first().words.first().startMs
-                else minOf(next ?: Long.MAX_VALUE, group.last().words.last().endMs + HOLD_MS)
-                out += EditPage(group, start, endOfGroup)
+                val last = g == groups.lastIndex
+                val sungUntil = maxOf(group.last().words.last().endMs, if (last) backing.lastOrNull()?.endMs ?: 0L else 0L)
+                val endOfGroup = if (!last) groups[g + 1].first().words.first().startMs
+                else minOf(next ?: Long.MAX_VALUE, sungUntil + HOLD_MS)
+                // Os backing vocals aparecem embaixo do último bloco da linha.
+                out += EditPage(group, start, endOfGroup, backing = if (last) backing else emptyList())
             }
         }
         // Garante que um bloco nunca passa por cima do seguinte.

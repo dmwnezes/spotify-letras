@@ -1,26 +1,46 @@
 package com.dmwnezes.sintonia.edit
 
+import com.dmwnezes.sintonia.lyrics.BackingVocals
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.WordTiming
 
-/** Uma linha cantada, com o tempo de cada palavra (texto já sem espaços nas pontas). */
-internal class SungLine(val startMs: Long, val words: List<WordTiming.Span>, val seed: Int)
+/**
+ * Uma linha cantada, com o tempo de cada palavra (texto já sem espaços nas pontas).
+ * [backing] = backing vocals que vão embaixo, menores; [backingOnly] = a linha toda é backing vocal.
+ */
+internal class SungLine(
+    val startMs: Long,
+    val words: List<WordTiming.Span>,
+    val seed: Int,
+    val backing: List<WordTiming.Span> = emptyList(),
+    val backingOnly: Boolean = false,
+)
+
+/** Quanto menor fica o texto do backing vocal em relação à letra principal. */
+internal const val BACKING_SCALE = 0.6f
 
 internal object SungLines {
     fun from(lines: List<LyricLine>): List<SungLine> {
         val out = mutableListOf<SungLine>()
         lines.forEachIndexed { i, l ->
-            if (l.text.isBlank()) return@forEachIndexed
+            if (l.text.isBlank() && !l.backingOnly) return@forEachIndexed
             val next = lines.drop(i + 1).firstOrNull()?.timeMs
-            val ws = WordTiming.spans(l, next).map { it.copy(text = it.text.trim()) }.filter { it.text.isNotEmpty() }
-            if (ws.isNotEmpty()) out += SungLine(l.timeMs, ws, l.text.hashCode() xor (i * 7919))
+            fun clean(x: List<WordTiming.Span>) = x.map { it.copy(text = it.text.trim()) }.filter { it.text.isNotEmpty() }
+            val back = clean(BackingVocals.spans(l, next))
+            val seed = (l.text + l.backing.orEmpty()).hashCode() xor (i * 7919)
+            if (l.backingOnly) {
+                if (back.isNotEmpty()) out += SungLine(l.timeMs, back, seed, backingOnly = true)
+                return@forEachIndexed
+            }
+            val ws = clean(WordTiming.spans(l.copy(backing = null), next))
+            if (ws.isNotEmpty()) out += SungLine(l.timeMs, ws, seed, back)
         }
         return out
     }
 }
 
-/** Uma linha de texto na tela (uma linha da letra pode virar 1–3 destas). */
-internal class Row(val line: Int, val words: IntArray, val xs: FloatArray, val width: Float, val y: Float)
+/** Uma linha de texto na tela (uma linha da letra pode virar 1–3 destas). [backing] = linha de backing vocal (menor). */
+internal class Row(val line: Int, val words: IntArray, val xs: FloatArray, val width: Float, val y: Float, val backing: Boolean = false)
 
 /** Letra quebrada em linhas que cabem na largura, empilhadas como uma lista que rola. */
 internal class ScrollLayout(val lines: List<SungLine>, val rows: List<Row>, val centers: FloatArray) {
@@ -56,18 +76,31 @@ internal class ScrollLayout(val lines: List<SungLine>, val rows: List<Row>, val 
             var y = 0f
             lines.forEachIndexed { li, line ->
                 val first = rows.size
-                var cur = mutableListOf<Int>(); var xs = mutableListOf<Float>(); var x = 0f
-                fun flush() {
-                    if (cur.isEmpty()) return
-                    rows += Row(li, cur.toIntArray(), xs.toFloatArray(), x - space, y)
-                    y += lh; cur = mutableListOf(); xs = mutableListOf(); x = 0f
+                // Palavras principais (ou, numa linha só de backing, as do backing em tamanho menor).
+                fun place(words: List<WordTiming.Span>, backing: Boolean, step: Float, k: Float, measureOf: (Int) -> Float) {
+                    var cur = mutableListOf<Int>(); var xs = mutableListOf<Float>(); var x = 0f
+                    fun flush() {
+                        if (cur.isEmpty()) return
+                        rows += Row(li, cur.toIntArray(), xs.toFloatArray(), x - space * k, y, backing)
+                        y += step; cur = mutableListOf(); xs = mutableListOf(); x = 0f
+                    }
+                    words.indices.forEach { wi ->
+                        val ww = measureOf(wi)
+                        if (cur.isNotEmpty() && x + ww > maxW) flush()
+                        cur += wi; xs += x; x += ww + space * k
+                    }
+                    flush()
                 }
-                line.words.indices.forEach { wi ->
-                    val ww = measure(line, wi)
-                    if (cur.isNotEmpty() && x + ww > maxW) flush()
-                    cur += wi; xs += x; x += ww + space
+                if (line.backingOnly) {
+                    place(line.words, true, lh * BACKING_SCALE * 1.1f, BACKING_SCALE) { measure(line, it) * BACKING_SCALE }
+                } else {
+                    place(line.words, false, lh, 1f) { measure(line, it) }
+                    if (line.backing.isNotEmpty()) {
+                        y += lh * 0.05f
+                        // As palavras do backing ficam depois das principais na mesma lista de índices: words.size + i.
+                        place(line.backing, true, lh * BACKING_SCALE * 1.1f, BACKING_SCALE) { measure(line, line.words.size + it) * BACKING_SCALE }
+                    }
                 }
-                flush()
                 centers[li] = (rows[first].y + rows.last().y) / 2
                 y += gap
             }
@@ -75,3 +108,6 @@ internal class ScrollLayout(val lines: List<SungLine>, val rows: List<Row>, val 
         }
     }
 }
+
+/** Palavra [i] da linha: as principais primeiro, depois as do backing. */
+internal fun SungLine.wordAt(i: Int): WordTiming.Span = if (i < words.size) words[i] else backing[i - words.size]

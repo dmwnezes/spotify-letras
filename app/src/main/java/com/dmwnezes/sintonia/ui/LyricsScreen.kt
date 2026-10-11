@@ -568,10 +568,15 @@ private fun SyncedLyrics(
                 val spans = if (karaoke && i == index && line.text.isNotBlank()) {
                     remember(line) { WordTiming.spans(line, lines.getOrNull(i + 1)?.timeMs) }
                 } else null
+                val backingSpans = if (line.backing != null) {
+                    remember(line) { com.dmwnezes.sintonia.lyrics.BackingVocals.spans(line, lines.getOrNull(i + 1)?.timeMs) }
+                } else null
                 LyricLineView(
                     text = line.text,
                     translation = tr,
                     spans = spans,
+                    backing = backingSpans,
+                    lit = karaoke && i == index,
                     positionMs = { posMs + currentOffset + 120 },
                     distance = if (index < 0) i + 1 else i - index,
                     onClick = { onSeek(line.timeMs) },
@@ -592,6 +597,8 @@ private fun LyricLineView(
     onLongClick: () -> Unit,
     spans: List<WordTiming.Span>? = null,
     positionMs: () -> Long = { 0L },
+    backing: List<WordTiming.Span>? = null,
+    lit: Boolean = false,
 ) {
     val active = distance == 0
     val st = LocalLyricsStyle.current
@@ -605,7 +612,7 @@ private fun LyricLineView(
     )
     val scale by animateFloatAsState(if (active) 1f else 0.94f, tween(350), label = "scale")
     val blurDp = if (abs(distance) >= 2) 1.5.dp else 0.dp
-    val isBreak = text.isBlank()
+    val isBreak = text.isBlank() && backing.isNullOrEmpty()
     Column(
         Modifier
             .fillMaxWidth()
@@ -624,7 +631,9 @@ private fun LyricLineView(
             }
             .blur(blurDp),
     ) {
-        if (spans != null) {
+        if (text.isBlank() && !backing.isNullOrEmpty()) {
+            // Linha só de backing vocal: fica no lugar da linha, menor e mais clara.
+        } else if (spans != null) {
             // Karaokê: cada palavra vai acendendo conforme é cantada.
             val prog = WordTiming.progress(spans, positionMs())
             val dim = Palette.ink.copy(alpha = 0.42f)
@@ -645,6 +654,22 @@ private fun LyricLineView(
             fontWeight = FontWeight.ExtraBold,
             fontFamily = st.family,
         )
+        // Backing vocals: logo abaixo, menores e mais claros, sem os parênteses (como no Apple Music).
+        if (!backing.isNullOrEmpty()) {
+            val bk = if (lit) WordTiming.progress(backing, positionMs()) else null
+            val dim = Palette.ink.copy(alpha = 0.38f)
+            val on = Palette.ink.copy(alpha = 0.85f)
+            Text(
+                text = buildAnnotatedString {
+                    backing.forEachIndexed { k, sp -> withStyle(SpanStyle(color = if (bk != null) lerp(dim, on, bk[k]) else on)) { append(sp.text.trimEnd() + " ") } }
+                },
+                fontSize = (21 * st.k).sp,
+                lineHeight = (26 * st.k).sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = st.family,
+                modifier = Modifier.padding(top = if (text.isBlank()) 0.dp else 4.dp),
+            )
+        }
         // Tradução logo abaixo, menor e mais clara, como no Spotify.
         if (!isBreak && translation != null) {
             Text(

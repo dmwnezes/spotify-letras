@@ -67,4 +67,26 @@ class WordTimingTest {
         org.junit.Assert.assertEquals(1f, p[0], 0f)
         org.junit.Assert.assertEquals(0f, p[3], 0f)
     }
+
+    @Test
+    fun splitsBackingVocals() {
+        // Letra inventada para o teste.
+        val l = LrcParser.parse("[00:01.00]eu vou ficar aqui (ficar aqui)\n[00:05.00](uh-uh) a noite toda\n[00:09.00](la la la)\n[00:12.00]sem nada")
+        org.junit.Assert.assertEquals("eu vou ficar aqui", l[0].text)
+        org.junit.Assert.assertEquals("ficar aqui", l[0].backing)
+        org.junit.Assert.assertEquals("a noite toda", l[1].text)
+        org.junit.Assert.assertEquals("uh-uh", l[1].backing)
+        org.junit.Assert.assertTrue(l[1].backingAt < 0.3f)
+        org.junit.Assert.assertTrue(l[2].backingOnly)
+        org.junit.Assert.assertEquals("la la la", l[2].backing)
+        org.junit.Assert.assertNull(l[3].backing)
+        val sp = com.dmwnezes.sintonia.lyrics.BackingVocals.spans(l[0], 5000)
+        org.junit.Assert.assertEquals(listOf("ficar", "aqui"), sp.map { it.text.trim() })
+        org.junit.Assert.assertTrue(sp.first().startMs > 1000)
+        // Com tempo por palavra: o que está entre parênteses sai da linha principal.
+        val e = LrcParser.parse("[00:10.00] <00:10.00>sempre <00:10.50>junto <00:11.00>(junto <00:11.40>sim)")
+        org.junit.Assert.assertEquals("sempre junto", e[0].text)
+        org.junit.Assert.assertEquals(listOf("sempre ", "junto "), e[0].words!!.map { it.text })
+        org.junit.Assert.assertEquals(2, e[0].backingWords!!.size)
+    }
 }
