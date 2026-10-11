@@ -192,10 +192,19 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                         .background(Cream.copy(alpha = 0.06f)),
                 )
                 Spacer(Modifier.height(frameH * 0.018f))
+                val title = track?.name ?: "Toque uma música no Spotify"
+                // Nome inteiro: diminui a fonte em nomes longos e usa até 2 linhas.
+                val titleSize = when {
+                    title.length <= 20 -> 21
+                    title.length <= 30 -> 19
+                    title.length <= 44 -> 17
+                    else -> 15
+                }
                 Text(
-                    track?.name ?: "Toque uma música no Spotify",
-                    color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, style = Legible,
-                    textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    title,
+                    color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.ExtraBold, fontSize = titleSize.sp,
+                    lineHeight = (titleSize * 1.15f).sp, style = Legible,
+                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 track?.let {
                     Text(
