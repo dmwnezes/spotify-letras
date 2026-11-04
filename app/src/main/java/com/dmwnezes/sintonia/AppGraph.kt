@@ -30,7 +30,7 @@ object AppGraph {
     }
     val spotify by lazy { SpotifyClient(prefs, http) }
     val lrclib by lazy { LrcLibClient(http) }
-    val translator by lazy { LyricsTranslator() }
+    val translator by lazy { LyricsTranslator(prefs, http, app.filesDir) }
     val playback by lazy { Playback(app, prefs, spotify, lrclib, translator) }
     val notebook by lazy { NotebookStore(app) }
 }

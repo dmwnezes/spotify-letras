@@ -18,7 +18,7 @@ App Android que mostra a letra da música que está tocando no Spotify, sincroni
 - **Botões:** pílulas com gradiente, brilho e sombra na cor da música, que afundam com mola ao tocar.
 - **Aparência:** tema claro, escuro ou automático (cores tiradas da capa) e fonte/tamanho da letra.
 - **Atalhos:** segure o ícone do app para abrir Letra, Buscar, Caderno ou Quiz.
-- **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha (feita no celular, grátis).
+- **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha. Com uma chave grátis do Gemini (Ajustes), a IA lê a letra inteira e traduz com o contexto da música; sem chave ou sem conexão, usa o tradutor do celular (ML Kit).
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
 - **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo escolhido (Edit, Vidro, Cilindro ou Colagem) e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
@@ -73,7 +73,7 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── edit/                  estilos animados da letra (Edit, Vidro, Cilindro, Colagem)
 ├── reco/                  recomendações (Deezer, pontuação, aprendizado, prévias)
 ├── live/                  notificação da tela de bloqueio e widget
-├── translate/             tradução no celular (ML Kit)
+├── translate/             tradução com o Gemini e reserva no celular (ML Kit)
 ├── notebook/              caderno (trechos e diário) e imagem do trecho
 ├── wrapped/               retrospectiva animada
 ├── quiz/                  quiz da letra

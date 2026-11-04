@@ -87,6 +87,7 @@ class Playback(
     private var trackJob: Job? = null
     private var translateJob: Job? = null
     private var currentTrackId: String? = null
+    private var currentTrack: Track? = null
     private var detectedLang: String? = null
 
     // ---------- Quem está usando ----------
@@ -153,6 +154,7 @@ class Playback(
     private fun onTrack(track: Track?) {
         if (track == null || track.id == currentTrackId) return
         currentTrackId = track.id
+        currentTrack = track
         detectedLang = null
         trackJob?.cancel()
         translateJob?.cancel()
@@ -197,7 +199,7 @@ class Playback(
         detectedLang = code
         val name = translator.displayName(code)
         _state.update { it.copy(translation = TranslationState.Available(name)) }
-        if (prefs.showTranslation) translate(track.id, code, lines)
+        if (prefs.showTranslation) translate(track, code, lines)
     }
 
     /** Liga/desliga a tradução (chamado pelo botão na tela de letras). */
@@ -207,24 +209,32 @@ class Playback(
         val lyrics = (_state.value.lyrics as? LyricsState.Ready)?.lyrics ?: return
         val name = translator.displayName(code)
         if (on) {
-            if (_state.value.translation !is TranslationState.Ready) translate(currentTrackId ?: return, code, lyricLines(lyrics))
+            if (_state.value.translation !is TranslationState.Ready) translate(currentTrack ?: return, code, lyricLines(lyrics))
         } else {
             translateJob?.cancel()
             _state.update { it.copy(translation = TranslationState.Available(name)) }
         }
     }
 
-    private fun translate(trackId: String, code: String, lines: List<String>) {
+    /** Traduz de novo a música atual (a chave do Gemini acabou de mudar). */
+    fun retranslate() {
+        val code = detectedLang ?: return
+        val lyrics = (_state.value.lyrics as? LyricsState.Ready)?.lyrics ?: return
+        if (prefs.showTranslation) translate(currentTrack ?: return, code, lyricLines(lyrics))
+    }
+
+    private fun translate(track: Track, code: String, lines: List<String>) {
         val name = translator.displayName(code)
         translateJob?.cancel()
         translateJob = scope.launch {
-            val needsDownload = runCatching { !translator.isModelReady(code) }.getOrDefault(false)
+            val needsDownload = !translator.hasAiKey && runCatching { !translator.isModelReady(code) }.getOrDefault(false)
             _state.update { it.copy(translation = TranslationState.Loading(name, needsDownload)) }
-            val result = runCatching { translator.translate(trackId, code, lines) }
-            if (trackId != currentTrackId) return@launch
+            val result = runCatching { translator.translate(track, code, lines) }
+            if (track.id != currentTrackId) return@launch
+            result.getOrNull()?.notice?.let { _messages.tryEmit(it) }
             _state.update {
                 it.copy(translation = result.fold(
-                    { t -> TranslationState.Ready(name, t) },
+                    { t -> TranslationState.Ready(name, t.lines) },
                     { TranslationState.Failed(name, "Não consegui traduzir agora. Confira a internet (o tradutor é baixado uma vez).") },
                 ))
             }

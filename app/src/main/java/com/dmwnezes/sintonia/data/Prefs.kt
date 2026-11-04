@@ -45,6 +45,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("show_translation", true)
         set(v) = sp.edit().putBoolean("show_translation", v).apply()
 
+    /** Chave pessoal do Gemini para a tradução com contexto. */
+    var geminiKey: String
+        get() = sp.getString("gemini_key", "") ?: ""
+        set(v) = sp.edit().putString("gemini_key", v.trim()).apply()
+
     /** Letra ao vivo na tela de bloqueio e no widget (serviço em primeiro plano). */
     var liveLyrics: Boolean
         get() = sp.getBoolean("live_lyrics", false)

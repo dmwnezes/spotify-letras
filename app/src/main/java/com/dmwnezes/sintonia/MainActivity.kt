@@ -302,6 +302,7 @@ class MainActivity : ComponentActivity() {
                 state = state,
                 onLiveLyrics = vm::setLiveLyrics,
                 onTranslation = vm::setShowTranslation,
+                onGeminiKey = { vm.setGeminiKey(it); showSettings = false },
                 onTheme = vm::setVizTheme,
                 onCheckUpdates = { showSettings = false; showUpdate = true },
                 onThemeMode = vm::setThemeMode,

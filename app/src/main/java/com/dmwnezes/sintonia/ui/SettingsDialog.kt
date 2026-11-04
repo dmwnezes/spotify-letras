@@ -14,19 +14,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -40,6 +49,7 @@ fun SettingsDialog(
     state: UiState,
     onLiveLyrics: (Boolean) -> Unit,
     onTranslation: (Boolean) -> Unit,
+    onGeminiKey: (String) -> Unit = {},
     onTheme: (VizTheme) -> Unit,
     onCheckUpdates: () -> Unit,
     onThemeMode: (ThemeMode) -> Unit = {},
@@ -120,11 +130,11 @@ fun SettingsDialog(
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 SettingSwitch(
                     title = "Tradução das letras",
-                    desc = "Quando a letra está em outro idioma, mostra a tradução em português abaixo de cada linha. " +
-                        "O tradutor de cada idioma é baixado uma vez (~30 MB).",
+                    desc = "Quando a letra está em outro idioma, mostra a tradução em português abaixo de cada linha.",
                     checked = state.showTranslation,
                     onChange = onTranslation,
                 )
+                GeminiKeyField(state.geminiKey, onGeminiKey)
                 HorizontalDivider(Modifier.padding(vertical = 14.dp))
                 Text("Tema do visualizer", fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
@@ -148,6 +158,32 @@ fun SettingsDialog(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar") } },
     )
+}
+
+@Composable
+private fun GeminiKeyField(saved: String, onSave: (String) -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    var key by remember { mutableStateOf(saved) }
+    Text(
+        "Com uma chave grátis do Gemini, a IA lê a letra inteira e traduz com o contexto da música. " +
+            "A letra, o título, o artista e o álbum são enviados ao Google. " +
+            "Sem chave, o tradutor básico do celular é usado (baixado uma vez, ~30 MB).",
+        fontSize = 12.sp, color = Palette.ink.copy(alpha = 0.6f), lineHeight = 16.sp, modifier = Modifier.padding(top = 10.dp),
+    )
+    OutlinedTextField(
+        value = key,
+        onValueChange = { key = it },
+        label = { Text("Chave do Gemini") },
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val compact = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        AppOutlinedButton(onClick = { uriHandler.openUri("https://aistudio.google.com/apikey") }, contentPadding = compact) { Text("Criar chave") }
+        AppButton(onClick = { onSave(key) }, enabled = key.trim() != saved, contentPadding = compact) { Text("Salvar") }
+    }
 }
 
 @Composable
