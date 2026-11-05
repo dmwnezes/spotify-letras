@@ -58,6 +58,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.dmwnezes.sintonia.LyricsState
+import com.dmwnezes.sintonia.TranslationState
 import com.dmwnezes.sintonia.UiState
 import com.dmwnezes.sintonia.edit.EditLyricsView
 import com.dmwnezes.sintonia.edit.EditRenderer
@@ -80,6 +81,8 @@ fun RecordModeScreen(
     onEnsurePlaying: () -> Unit,
     onExit: () -> Unit,
     startLive: Boolean = false, // só para pré-visualização/testes
+    onSetShowTranslation: (Boolean) -> Unit = {},
+    onSetTranslationOnly: (Boolean) -> Unit = {},
 ) {
     var phase by remember { mutableStateOf(if (startLive) Phase.LIVE else Phase.SETUP) }
     var fromStart by remember { mutableStateOf(false) }
@@ -112,6 +115,9 @@ fun RecordModeScreen(
 
         when (phase) {
             Phase.SETUP -> SetupPanel(
+                state = state,
+                onShowTranslation = onSetShowTranslation,
+                onTranslationOnly = onSetTranslationOnly,
                 onStart = { fromSong ->
                     fromStart = fromSong
                     phase = Phase.COUNTDOWN
@@ -146,6 +152,9 @@ private fun RecordContent(state: UiState, dim: Boolean) {
     val now = state.now
     val track = now?.track
     val lines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines
+    val translations = (state.translation as? TranslationState.Ready)?.lines?.takeIf { state.showTranslation }
+    // Letra e tradução: a letra sobe e diminui para as duas caberem acima do @dmwnezes.
+    val both = translations != null && !state.translationOnly
     val nowState by rememberUpdatedState(now)
     val offset by rememberUpdatedState(state.lyricsOffsetMs)
 
@@ -158,9 +167,12 @@ private fun RecordContent(state: UiState, dim: Boolean) {
             val frameTop = (maxHeight - frameH) / 2
             EditLyricsView(
                 lines = lines,
+                translations = translations,
+                translationOnly = state.translationOnly,
                 positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                centerFraction = (frameTop + frameH * 0.605f) / maxHeight,
-                maxWidthFraction = (frameW * 0.74f) / maxWidth,
+                centerFraction = (frameTop + frameH * (if (both) 0.55f else 0.605f)) / maxHeight,
+                maxWidthFraction = (frameW * (if (both) 0.54f else 0.74f)) / maxWidth,
+                translationWidthFraction = (frameW * 0.74f) / maxWidth,
                 modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
             )
         }
@@ -234,7 +246,13 @@ private fun SafeAreaGuide() {
 }
 
 @Composable
-private fun SetupPanel(onStart: (fromSongStart: Boolean) -> Unit, onExit: () -> Unit) {
+private fun SetupPanel(
+    state: UiState,
+    onShowTranslation: (Boolean) -> Unit,
+    onTranslationOnly: (Boolean) -> Unit,
+    onStart: (fromSongStart: Boolean) -> Unit,
+    onExit: () -> Unit,
+) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
         Column(
             Modifier.padding(24.dp).clip(RoundedCornerShape(26.dp)).background(Color(0xFF15120F)).padding(22.dp),
@@ -246,6 +264,11 @@ private fun SetupPanel(onStart: (fromSongStart: Boolean) -> Unit, onExit: () -> 
             Step("3", "Para sair, toque na tela e em \"Sair\", ou use o gesto de voltar. Corte o começo e o fim no editor do Instagram.")
             Step("4", "Tudo fica dentro do quadro dos Stories (pontilhado), longe do perfil, da caixa de resposta e do coração.")
             Spacer(Modifier.height(12.dp))
+            if (state.translation != TranslationState.None) {
+                Text("Tradução", color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(8.dp))
+                TranslationChoice(state.showTranslation, state.translationOnly, onShowTranslation, onTranslationOnly, tint = Cream, onTint = Color.Black)
+            }
             Spacer(Modifier.height(16.dp))
             AppButton(
                 onClick = { onStart(true) }, modifier = Modifier.fillMaxWidth().height(50.dp),

@@ -19,16 +19,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.core.content.res.ResourcesCompat
 import com.dmwnezes.sintonia.R
 import com.dmwnezes.sintonia.lyrics.LyricLine
+import com.dmwnezes.sintonia.lyrics.TranslatedLyrics
 
-/** A letra no estilo Edit, ao vivo, acompanhando a música. [translations] tem uma tradução por linha. */
+/**
+ * A letra no estilo Edit, ao vivo, acompanhando a música. [translations] tem uma tradução por linha;
+ * com [translationOnly], a tradução toma o lugar da letra e herda o efeito das palavras acendendo.
+ */
 @Composable
 fun EditLyricsView(
     lines: List<LyricLine>,
     positionMs: () -> Long,
     modifier: Modifier = Modifier,
     translations: List<String?>? = null,
+    translationOnly: Boolean = false,
     centerFraction: Float? = null,
     maxWidthFraction: Float? = null,
+    translationWidthFraction: Float? = null,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current.density
@@ -38,7 +44,12 @@ fun EditLyricsView(
     val defaults = remember(renderer) { renderer.centerFraction to renderer.maxWidthFraction }
     renderer.centerFraction = centerFraction ?: defaults.first
     renderer.maxWidthFraction = maxWidthFraction ?: defaults.second
-    remember(renderer, lines, translations) { renderer.setLines(lines, translations); 0 }
+    renderer.translationWidthFraction = translationWidthFraction
+    remember(renderer, lines, translations, translationOnly) {
+        if (translationOnly && translations != null) renderer.setLines(TranslatedLyrics.only(lines, translations))
+        else renderer.setLines(lines, translations)
+        0
+    }
 
     val pos by rememberUpdatedState(positionMs)
     var t by remember { mutableFloatStateOf(0f) }

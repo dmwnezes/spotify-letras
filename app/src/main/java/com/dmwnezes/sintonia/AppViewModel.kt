@@ -43,6 +43,7 @@ data class UiState(
     val vizTheme: VizTheme = VizTheme.BRILHOS,
     val playerOnly: Boolean = false,
     val showTranslation: Boolean = true,
+    val translationOnly: Boolean = false,
     val geminiKey: String = "",
     val karaoke: Boolean = true,
     val lyricsMode: com.dmwnezes.sintonia.edit.LyricsMode = com.dmwnezes.sintonia.edit.LyricsMode.EDIT,
@@ -88,6 +89,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vizTheme = VizTheme.from(prefs.vizTheme),
         playerOnly = prefs.playerOnly,
         showTranslation = prefs.showTranslation,
+        translationOnly = prefs.translationOnly,
         geminiKey = prefs.geminiKey,
         karaoke = prefs.karaoke,
         lyricsMode = com.dmwnezes.sintonia.edit.LyricsMode.from(prefs.lyricsMode),
@@ -183,6 +185,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setShowTranslation(on: Boolean) {
         playback.setTranslationEnabled(on)
         _local.update { it.copy(showTranslation = on) }
+    }
+
+    fun setTranslationOnly(on: Boolean) {
+        prefs.translationOnly = on
+        _local.update { it.copy(translationOnly = on) }
     }
 
     fun setGeminiKey(key: String) {

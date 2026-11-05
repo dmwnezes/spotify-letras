@@ -161,7 +161,7 @@ class RedesignRenderTest {
             AppBackground(colors) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                     Box(Modifier.background(Color(0xFF15121B), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).padding(top = 20.dp)) {
-                        LyricsOptionsContent(mode, accent, true, VizTheme.BRILHOS, false, {}, {}, {}, {}, {}, {}, {})
+                        LyricsOptionsContent(mode, accent, true, VizTheme.BRILHOS, false, {}, {}, {}, {}, {}, {}, {}, translationAvailable = true, showTranslation = true, translationOnly = true)
                     }
                 }
             }

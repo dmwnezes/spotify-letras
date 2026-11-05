@@ -141,6 +141,29 @@ object LrcParser {
     }
 }
 
+/** A letra só em português, para o modo "só tradução". */
+object TranslatedLyrics {
+    /**
+     * Troca cada linha pela tradução e reparte o tempo em que o original é cantado entre as palavras traduzidas,
+     * para o efeito de acender palavra por palavra seguir a música. Linhas sem tradução ficam como estão.
+     * Os backing vocals saem porque não são traduzidos.
+     */
+    fun only(lines: List<LyricLine>, translations: List<String?>): List<LyricLine> = lines.mapIndexed { i, line ->
+        val plain = line.copy(backing = null, backingWords = null)
+        val tr = translations.getOrNull(i)?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapIndexed plain
+        val sung = WordTiming.spans(plain, lines.getOrNull(i + 1)?.timeMs)
+        val pieces = Regex("""\S+\s*""").findAll(tr).map { it.value }.toList()
+        if (sung.isEmpty() || pieces.isEmpty()) return@mapIndexed plain
+        val start = sung.first().startMs
+        val total = sung.last().endMs - start
+        val weights = pieces.map { p -> p.count { it.isLetterOrDigit() } + 1 }
+        var done = 0
+        plain.copy(text = tr, words = pieces.mapIndexed { k, p ->
+            Word(start + total * done / weights.sum(), p).also { done += weights[k] }
+        })
+    }
+}
+
 /** Tempo de cada palavra de uma linha: o real quando existe, senão uma estimativa pelo tamanho das palavras. */
 object WordTiming {
 

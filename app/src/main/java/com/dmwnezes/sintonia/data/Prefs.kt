@@ -41,6 +41,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("show_translation", true)
         set(v) = sp.edit().putBoolean("show_translation", v).apply()
 
+    /** Mostra só a tradução, no lugar da letra original. */
+    var translationOnly: Boolean
+        get() = sp.getBoolean("translation_only", false)
+        set(v) = sp.edit().putBoolean("translation_only", v).apply()
+
     /** Chave pessoal do Gemini para a tradução com contexto. */
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

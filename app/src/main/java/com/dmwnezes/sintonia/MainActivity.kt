@@ -132,6 +132,8 @@ class MainActivity : ComponentActivity() {
                             onRestartSong = vm::restartAndPlay,
                             onEnsurePlaying = vm::ensurePlaying,
                             onExit = { recordMode.value = false },
+                            onSetShowTranslation = vm::setShowTranslation,
+                            onSetTranslationOnly = vm::setTranslationOnly,
                         )
                     } else if (splash) {
                         SplashCredits(onDone = { splash = false })
@@ -240,6 +242,7 @@ class MainActivity : ComponentActivity() {
                         onNudgeOffset = vm::nudgeOffset,
                         onSetPlayerOnly = vm::setPlayerOnly,
                         onSetShowTranslation = vm::setShowTranslation,
+                        onSetTranslationOnly = vm::setTranslationOnly,
                         onSetKaraoke = vm::setKaraoke,
                         onOpenSearch = { showSearch = true },
                         onSetLyricsMode = vm::setLyricsMode,

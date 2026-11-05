@@ -74,6 +74,11 @@ fun LyricsOptionsSheet(
     onKaraoke: (Boolean) -> Unit,
     onVizTheme: (VizTheme) -> Unit,
     onDismiss: () -> Unit,
+    translationAvailable: Boolean = false,
+    showTranslation: Boolean = false,
+    translationOnly: Boolean = false,
+    onShowTranslation: (Boolean) -> Unit = {},
+    onTranslationOnly: (Boolean) -> Unit = {},
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -82,7 +87,8 @@ fun LyricsOptionsSheet(
         contentColor = Color.White,
         dragHandle = { Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(40.dp, 5.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) },
     ) {
-        LyricsOptionsContent(mode, accent, karaoke, vizTheme, playerOnly, onMode, onRecord, onNote, onTune, onKaraoke, onVizTheme, onDismiss)
+        LyricsOptionsContent(mode, accent, karaoke, vizTheme, playerOnly, onMode, onRecord, onNote, onTune, onKaraoke, onVizTheme, onDismiss,
+            translationAvailable, showTranslation, translationOnly, onShowTranslation, onTranslationOnly)
     }
 }
 
@@ -101,6 +107,11 @@ fun LyricsOptionsContent(
     onKaraoke: (Boolean) -> Unit,
     onVizTheme: (VizTheme) -> Unit,
     onDismiss: () -> Unit,
+    translationAvailable: Boolean = false,
+    showTranslation: Boolean = false,
+    translationOnly: Boolean = false,
+    onShowTranslation: (Boolean) -> Unit = {},
+    onTranslationOnly: (Boolean) -> Unit = {},
 ) {
     androidx.compose.runtime.CompositionLocalProvider(LocalAppPalette provides DarkPalette) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 18.dp)) {
@@ -118,6 +129,11 @@ fun LyricsOptionsContent(
                     Text(mode.hint, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, modifier = Modifier.padding(start = 20.dp, top = 8.dp))
                 }
 
+                if (!playerOnly && translationAvailable) {
+                    Text("Tradução", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 20.dp, top = 22.dp, bottom = 10.dp))
+                    TranslationChoice(showTranslation, translationOnly, onShowTranslation, onTranslationOnly, Modifier.padding(horizontal = 20.dp))
+                }
+
                 if (!playerOnly && mode == LyricsMode.CLASSICO) {
                     Spacer(Modifier.height(16.dp))
                     ToggleRow(Icons.Rounded.TextFields, "Acender palavra por palavra", karaoke, accent, onKaraoke)
@@ -127,6 +143,29 @@ fun LyricsOptionsContent(
                     }
                 }
             }
+    }
+}
+
+/** Como mostrar a tradução: junto da letra, no lugar dela ou não mostrar. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun TranslationChoice(
+    show: Boolean,
+    only: Boolean,
+    onShow: (Boolean) -> Unit,
+    onOnly: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = Palette.ink,
+    onTint: Color = Palette.onInk,
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AppChip("Letra e tradução", show && !only, { onOnly(false); onShow(true) }, tint = tint, onTint = onTint)
+        AppChip("Só tradução", show && only, { onOnly(true); onShow(true) }, tint = tint, onTint = onTint)
+        AppChip("Sem tradução", !show, { onShow(false) }, tint = tint, onTint = onTint)
     }
 }
 

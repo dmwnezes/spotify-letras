@@ -27,6 +27,8 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
     var centerFraction = 0.42f
     /** Largura máxima do texto (0–1 da tela). */
     var maxWidthFraction = 0.84f
+    /** Largura da tradução; sem valor, usa a mesma da letra. */
+    var translationWidthFraction: Float? = null
 
     companion object {
         val BG = Color.rgb(6, 5, 5)
@@ -132,15 +134,15 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
             c.drawLine(-w, tear.y + tear.height, w * 2, tear.y + tear.height, line)
         }
         val backingBottom = if (page.backing.isNotEmpty()) drawBacking(c, w, page.backing, top + blockH + size * 0.22f, size, posMs, exit) else top + blockH
-        page.translation?.let { drawTranslation(c, w, it, backingBottom + w * 0.035f, page, posMs, exit) }
+        page.translation?.let { drawTranslation(c, w, h, it, backingBottom + w * 0.035f, page, posMs, exit) }
         c.restore()
         text.textSkewX = 0f
     }
 
     /** Tradução embaixo de tudo, com tamanho fixo: não acompanha os pedaços grandes da letra nem pisca entre os blocos da linha. */
-    private fun drawTranslation(c: Canvas, w: Float, translation: String, top: Float, page: EditPage, posMs: Long, exit: Float) {
-        val width = (w * maxWidthFraction).toInt()
-        translationPaint.textSize = w * 0.048f
+    private fun drawTranslation(c: Canvas, w: Float, h: Float, translation: String, top: Float, page: EditPage, posMs: Long, exit: Float) {
+        val width = (w * (translationWidthFraction ?: maxWidthFraction)).toInt()
+        translationPaint.textSize = min(w * 0.048f, h * 0.027f)
         if (translationFor != translation || translationWidth != width) {
             translationLayout = StaticLayout.Builder.obtain(translation, 0, translation.length, translationPaint, width)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
