@@ -126,7 +126,7 @@ class GeminiTranslator(http: OkHttpClient) {
                 if (started < models.size) startNext() else if (finished == started) throw failure
             }
             coroutineContext.cancelChildren()
-            winner
+            winner!!
         }
 
         private val SYSTEM = """
