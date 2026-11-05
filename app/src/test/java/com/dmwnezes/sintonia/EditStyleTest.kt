@@ -76,6 +76,37 @@ class EditStyleTest {
         assertTrue(page.chunks.joinToString(" ") { it.text } == "você sabe bem")
     }
 
+    private fun fixedPage(chunks: List<String>) = com.dmwnezes.sintonia.edit.EditPage(
+        chunks.map { com.dmwnezes.sintonia.edit.EditChunk(listOf(com.dmwnezes.sintonia.edit.EditWord(it, 0, 100))) },
+        0, 100_000, translation = "Eu quero te levar praquele lugar na Roche",
+    )
+
+    private fun fixedFrame(page: com.dmwnezes.sintonia.edit.EditPage, t: Float): Bitmap {
+        val r = EditRenderer(Typeface.createFromFile(File("src/main/res/font/montserrat.ttf")), 2f)
+        return Bitmap.createBitmap(720, 1280, Bitmap.Config.ARGB_8888).also { r.draw(Canvas(it), 720f, 1280f, page, 5_000, t) }
+    }
+
+    /** Altura da primeira linha de pixels bem claros: o grão é apagado demais para contar. */
+    private fun inkTop(b: Bitmap) = (0 until b.height).first { y ->
+        (0 until b.width step 2).count { x -> Color.red(b.getPixel(x, y)) > 200 } > 3
+    }
+
+    @Test
+    fun translationStaysInPlaceWhateverTheNumberOfRows() {
+        fun zone(b: Bitmap) = Bitmap.createBitmap(b, 0, 730, b.width, b.height - 730)
+        val one = zone(fixedFrame(fixedPage(listOf("eu")), 2.7f))
+        val three = zone(fixedFrame(fixedPage(listOf("I wanna take", "you to that", "place")), 2.7f))
+        assertTrue(one.sameAs(three))
+    }
+
+    @Test
+    fun lyricsDoNotDriftOverTimeOrWithRows() {
+        val page = fixedPage(listOf("I wanna take", "you to that", "place"))
+        val y = inkTop(fixedFrame(page, 0.05f))
+        assertEquals(y, inkTop(fixedFrame(page, 3.1f)))
+        assertEquals(y, inkTop(fixedFrame(fixedPage(listOf("I wanna take")), 0.05f)))
+    }
+
     @Test
     fun removedStyleFallsBackToEdit() {
         assertEquals(LyricsMode.EDIT, LyricsMode.from("COLAGEM"))

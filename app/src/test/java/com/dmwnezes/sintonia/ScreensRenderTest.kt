@@ -155,9 +155,13 @@ class ScreensRenderTest {
     @Config(qualifiers = "w360dp-h800dp-xhdpi")
     fun recordModeTranslationOnly() = recordTranslated(only = true, name = "modo-gravar-so-traducao")
 
-    private fun recordTranslated(only: Boolean, name: String) {
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-xxhdpi")
+    fun recordModeOneRow() = recordTranslated(only = false, name = "modo-gravar-1-pedaco", first = "you know")
+
+    private fun recordTranslated(only: Boolean, name: String, first: String = "you know it is not the same as it was before my love") {
         rule.mainClock.autoAdvance = false
-        val lines = listOf(LyricLine(0, "you know it is not the same as it was before my love"), LyricLine(9000, "again"))
+        val lines = listOf(LyricLine(0, first), LyricLine(9000, "again"))
         val translated = listOf("Você sabe que isso não é mais como antes, e nunca mais vai ser como era, meu amor", null)
         val track = Track("x", "Canção de Teste com um nome bem comprido", listOf("Artista Exemplo"), "Álbum", null, 200_000)
         val state = UiState(loggedIn = true, firstLoadDone = true, now = NowPlaying(track, true, 2400, SystemClock.elapsedRealtime()),

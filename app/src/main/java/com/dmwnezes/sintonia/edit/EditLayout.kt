@@ -35,7 +35,7 @@ data class EditPage(
 object EditLayout {
     private const val MAX_CHARS = 13        // pedaço curto: cabe grande na tela
     private const val MAX_WORDS = 3
-    private const val MAX_CHUNKS = 3
+    const val MAX_CHUNKS = 3
     private const val HOLD_MS = 2600L       // quanto o último bloco fica na tela se a próxima linha demora
 
     /** Palavras pequenas que ficam grudadas na seguinte ("o amor", "it's not"). */

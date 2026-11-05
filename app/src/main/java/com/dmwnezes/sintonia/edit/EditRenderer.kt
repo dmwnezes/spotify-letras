@@ -87,7 +87,8 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
 
     private fun drawPage(c: Canvas, w: Float, h: Float, page: EditPage, posMs: Long, t: Float) {
         // Tamanho: grande, mas cada pedaço cabe em ~84% da largura.
-        var size = min(w * 0.136f, h * 0.12f) * (maxWidthFraction / 0.84f).coerceAtMost(1f)
+        val baseSize = min(w * 0.136f, h * 0.12f) * (maxWidthFraction / 0.84f).coerceAtMost(1f)
+        var size = baseSize
         text.textSize = size
         val widest = page.chunks.maxOf { text.measureText(it.text) }
         if (widest > w * maxWidthFraction) size *= (w * maxWidthFraction) / widest
@@ -96,17 +97,13 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
         text.textSize = size
         text.setShadowLayer(size * 0.30f, 0f, 0f, Color.argb(185, 255, 204, 145))
 
-        val lh = size * 1.06f
+        // Lugares fixos: cada pedaço fica sempre na mesma altura, tenha o bloco 1, 2 ou 3 pedaços ou letra menor.
+        val lh = baseSize * 1.06f
         val blockH = lh * page.chunks.size
+        val top = h * centerFraction - lh * EditLayout.MAX_CHUNKS / 2
+        val translationTop = top + lh * EditLayout.MAX_CHUNKS + w * 0.06f
         val exit = ((page.endMs - posMs) / EXIT_MS).coerceIn(0f, 1f)
 
-        c.save()
-        // Movimento suave do bloco inteiro.
-        c.translate(sin(t * 0.37f) * w * 0.012f, sin(t * 0.29f + 1f) * h * 0.006f)
-        val zoom = 1f + 0.012f * sin(t * 0.5f)
-        c.scale(zoom, zoom, w / 2, h * centerFraction)
-
-        val top = h * centerFraction - blockH / 2
         val tear = tearAt(t, page, top, lh, w)
         val baselines = page.chunks.indices.map { top + lh * (it + 0.78f) }
 
@@ -133,16 +130,19 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
             line.strokeWidth = 0.8f * density
             c.drawLine(-w, tear.y + tear.height, w * 2, tear.y + tear.height, line)
         }
-        val backingBottom = if (page.backing.isNotEmpty()) drawBacking(c, w, page.backing, top + blockH + size * 0.22f, size, posMs, exit) else top + blockH
-        page.translation?.let { drawTranslation(c, w, h, it, backingBottom + w * 0.035f, page, posMs, exit) }
-        c.restore()
+        if (page.backing.isNotEmpty()) {
+            val backingTop = top + blockH + size * 0.1f
+            val room = if (page.translation != null) translationTop - backingTop else Float.MAX_VALUE
+            drawBacking(c, w, page.backing, backingTop, room, size, posMs, exit)
+        }
+        page.translation?.let { drawTranslation(c, w, h, it, translationTop, page, posMs, exit) }
         text.textSkewX = 0f
     }
 
     /** Tradução embaixo de tudo, com tamanho fixo: não acompanha os pedaços grandes da letra nem pisca entre os blocos da linha. */
     private fun drawTranslation(c: Canvas, w: Float, h: Float, translation: String, top: Float, page: EditPage, posMs: Long, exit: Float) {
         val width = (w * (translationWidthFraction ?: maxWidthFraction)).toInt()
-        translationPaint.textSize = min(w * 0.048f, h * 0.027f)
+        translationPaint.textSize = min(w * 0.044f, h * 0.0248f)
         if (translationFor != translation || translationWidth != width) {
             translationLayout = StaticLayout.Builder.obtain(translation, 0, translation.length, translationPaint, width)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
@@ -161,22 +161,18 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
         c.restore()
     }
 
-    /** Backing vocals embaixo do bloco: menores, mais apagados, acendendo palavra por palavra (sem parênteses). Devolve onde terminam. */
-    private fun drawBacking(c: Canvas, w: Float, words: List<EditWord>, top: Float, mainSize: Float, posMs: Long, exit: Float): Float {
-        val bs = mainSize * 0.42f
+    /** Backing vocals embaixo do bloco: menores, mais apagados, acendendo palavra por palavra (sem parênteses). Diminuem até caber em [room], para não encostar na tradução. */
+    private fun drawBacking(c: Canvas, w: Float, words: List<EditWord>, top: Float, room: Float, mainSize: Float, posMs: Long, exit: Float) {
+        var bs = mainSize * 0.42f
+        var rows = wrapBacking(words, bs, w * maxWidthFraction)
+        while (bs * (1.1f + rows.size * 1.15f) > room && bs > mainSize * 0.2f) {
+            bs *= 0.9f
+            rows = wrapBacking(words, bs, w * maxWidthFraction)
+        }
         text.textSize = bs
         text.textSkewX = -0.12f
         text.setShadowLayer(bs * 0.25f, 0f, 0f, Color.argb(120, 255, 204, 145))
         val space = text.measureText(" ")
-        val maxW = w * maxWidthFraction
-        // Quebra em linhas que cabem na largura.
-        val rows = mutableListOf<MutableList<EditWord>>(mutableListOf())
-        var x = 0f
-        for (wd in words) {
-            val ww = text.measureText(wd.text)
-            if (rows.last().isNotEmpty() && x + ww > maxW) { rows += mutableListOf<EditWord>(); x = 0f }
-            rows.last() += wd; x += ww + space
-        }
         rows.forEachIndexed { r, row ->
             val rowW = row.sumOf { text.measureText(it.text).toDouble() }.toFloat() + space * (row.size - 1)
             var xx = (w - rowW) / 2
@@ -190,7 +186,20 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
                 xx += text.measureText(wd.text) + space
             }
         }
-        return top + bs * (1.1f + (rows.size - 1) * 1.15f + 0.35f)
+    }
+
+    /** Quebra em linhas que cabem na largura. */
+    private fun wrapBacking(words: List<EditWord>, size: Float, maxW: Float): List<List<EditWord>> {
+        text.textSize = size
+        val space = text.measureText(" ")
+        val rows = mutableListOf<MutableList<EditWord>>(mutableListOf())
+        var x = 0f
+        for (wd in words) {
+            val ww = text.measureText(wd.text)
+            if (rows.last().isNotEmpty() && x + ww > maxW) { rows += mutableListOf<EditWord>(); x = 0f }
+            rows.last() += wd; x += ww + space
+        }
+        return rows
     }
 
     private fun drawChunks(
@@ -202,8 +211,8 @@ class EditRenderer(typeface: Typeface, private val density: Float) {
             val space = text.measureText(" ")
             val x0 = (w - full) / 2
             val y = baselines[i]
-            // Curvatura: a linha de cima arqueia mais; respira devagar.
-            val bend = size * (if (i == 0) 0.24f else 0.08f) * (0.75f + 0.25f * sin(t * 0.8f + i))
+            // Curvatura: a linha de cima arqueia mais.
+            val bend = size * (if (i == 0) 0.18f else 0.06f)
             path.reset()
             val pad = size
             if (i == waveLine) {
