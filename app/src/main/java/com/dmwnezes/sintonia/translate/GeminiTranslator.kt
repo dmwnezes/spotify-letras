@@ -111,21 +111,22 @@ class GeminiTranslator(http: OkHttpClient) {
             }
             launch { while (true) { delay(hedgeMs); events.send(null) } }
             startNext()
-            while (true) {
+            var winner: List<String?>? = null
+            while (winner == null) {
                 val event = events.receive()
                 if (event == null) {
                     if (started < models.size) startNext()
                     continue
                 }
                 finished++
-                event.getOrNull()?.let {
-                    coroutineContext.cancelChildren()
-                    return@coroutineScope it
-                }
+                winner = event.getOrNull()
+                if (winner != null) break
                 val failure = event.exceptionOrNull() as GeminiFailure
                 if (failure.fatal) throw failure
                 if (started < models.size) startNext() else if (finished == started) throw failure
             }
+            coroutineContext.cancelChildren()
+            winner
         }
 
         private val SYSTEM = """
