@@ -170,8 +170,8 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                 translations = translations,
                 translationOnly = state.translationOnly,
                 positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                centerFraction = (frameTop + frameH * (if (both) 0.535f else 0.605f)) / maxHeight,
-                maxWidthFraction = (frameW * (if (both) 0.58f else 0.74f)) / maxWidth,
+                centerFraction = (frameTop + frameH * (if (both) 0.55f else 0.605f)) / maxHeight,
+                maxWidthFraction = (frameW * (if (both) 0.54f else 0.74f)) / maxWidth,
                 translationWidthFraction = (frameW * 0.74f) / maxWidth,
                 modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
             )
