@@ -1,8 +1,12 @@
 package com.dmwnezes.sintonia
 
 import com.dmwnezes.sintonia.data.Track
+import com.dmwnezes.sintonia.translate.GeminiFailure
 import com.dmwnezes.sintonia.translate.GeminiTranslator
 import com.dmwnezes.sintonia.translate.TranslationStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -47,6 +51,43 @@ class GeminiTranslatorTest {
 
     @Test(expected = JSONException::class) fun rejectsBlockedAnswer() {
         GeminiTranslator.parseResponse("""{"promptFeedback":{"blockReason":"OTHER"}}""", lines)
+    }
+
+    private val done = listOf<String?>("ok")
+
+    @Test fun promptAsksForLowThinking() {
+        val config = GeminiTranslator.buildRequest(track, "en", lines).getJSONObject("generationConfig")
+        assertEquals("low", config.getJSONObject("thinkingConfig").getString("thinkingLevel"))
+    }
+
+    @Test fun slowModelIsBeatenAndCancelled() = runBlocking {
+        var cancelled = false
+        val out = GeminiTranslator.race(listOf("trava", "rapido"), 30) { model ->
+            if (model == "trava") try { delay(60_000); done } catch (e: CancellationException) { cancelled = true; throw e }
+            else listOf("do rapido")
+        }
+        assertEquals(listOf<String?>("do rapido"), out)
+        assertTrue(cancelled)
+    }
+
+    @Test fun fastModelDoesNotCallTheNext() = runBlocking {
+        val called = mutableListOf<String>()
+        assertEquals(done, GeminiTranslator.race(listOf("a", "b"), 5_000) { called += it; done })
+        assertEquals(listOf("a"), called)
+    }
+
+    @Test fun failureGoesStraightToTheNext() = runBlocking {
+        val out = GeminiTranslator.race(listOf("a", "b"), 60_000) { if (it == "a") throw GeminiFailure("503") else done }
+        assertEquals(done, out)
+    }
+
+    @Test fun fatalFailureStopsAndLastFailureIsReported() = runBlocking {
+        val called = mutableListOf<String>()
+        val fatal = runCatching { GeminiTranslator.race(listOf("a", "b"), 60_000) { called += it; throw GeminiFailure("chave", fatal = true) } }
+        assertEquals("chave", fatal.exceptionOrNull()?.message)
+        assertEquals(listOf("a"), called)
+        val all = runCatching { GeminiTranslator.race(listOf("a", "b"), 60_000) { throw GeminiFailure(it) } }
+        assertEquals("b", all.exceptionOrNull()?.message)
     }
 
     @Test fun storeKeepsTranslationUntilLyricsChange() {

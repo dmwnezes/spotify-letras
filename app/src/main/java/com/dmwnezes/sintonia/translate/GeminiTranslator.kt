@@ -1,69 +1,133 @@
 package com.dmwnezes.sintonia.translate
 
 import com.dmwnezes.sintonia.data.Track
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.net.ConnectException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
-/** O Gemini não entregou a tradução; [message] explica o motivo para quem usa o app. */
-class GeminiFailure(message: String) : Exception(message)
+/** O Gemini não entregou a tradução; [message] explica o motivo. Com [fatal], não adianta tentar outro modelo. */
+class GeminiFailure(message: String, val fatal: Boolean = false) : Exception(message)
 
 /**
  * Traduz a letra inteira de uma vez, com título e artista, para a IA entender a música
  * antes de traduzir cada linha. A chave é do próprio usuário (plano grátis do Google AI Studio).
  */
 class GeminiTranslator(http: OkHttpClient) {
-    private val client = http.newBuilder().readTimeout(90, TimeUnit.SECONDS).build()
+    private val client = http.newBuilder()
+        .readTimeout(TOTAL_MS, TimeUnit.MILLISECONDS)
+        .callTimeout(TOTAL_MS, TimeUnit.MILLISECONDS)
+        .build()
 
     suspend fun translate(key: String, track: Track, code: String, lines: List<String>): List<String?> {
         val body = buildRequest(track, code, lines).toString().toRequestBody("application/json".toMediaType())
-        var failure = GeminiFailure("O Gemini não respondeu.")
-        // Se um modelo sair do ar ou estourar o limite grátis, tenta o seguinte.
-        for (model in MODELS) {
-            val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
-                .header("x-goog-api-key", key)
-                .post(body)
-                .build()
-            val (status, text) = try {
-                runInterruptible(Dispatchers.IO) {
-                    client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
-                }
-            } catch (e: IOException) {
-                throw GeminiFailure("Sem conexão com o Gemini.")
-            }
-            if (status == 401 || status == 403 || (status == 400 && "API_KEY_INVALID" in text)) {
-                throw GeminiFailure("A chave do Gemini foi recusada. Confira em Ajustes.")
-            }
-            if (status == 429) {
-                failure = GeminiFailure("O limite grátis do Gemini foi atingido.")
-                continue
-            }
-            if (status != 200) {
-                failure = GeminiFailure("O Gemini não respondeu (erro $status).")
-                continue
-            }
-            try {
-                return parseResponse(text, lines)
-            } catch (e: JSONException) {
-                failure = GeminiFailure("O Gemini não devolveu a tradução desta música.")
-            }
+        return withTimeoutOrNull(TOTAL_MS) { race(MODELS, HEDGE_MS) { ask(key, it, body, lines) } }
+            ?: throw GeminiFailure("O Gemini demorou demais.")
+    }
+
+    private suspend fun ask(key: String, model: String, body: RequestBody, lines: List<String>): List<String?> {
+        val request = Request.Builder()
+            .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+            .header("x-goog-api-key", key)
+            .post(body)
+            .build()
+        val (status, text) = try {
+            client.newCall(request).await()
+        } catch (e: UnknownHostException) {
+            throw GeminiFailure("Sem conexão com o Gemini.", fatal = true)
+        } catch (e: ConnectException) {
+            throw GeminiFailure("Sem conexão com o Gemini.", fatal = true)
+        } catch (e: IOException) {
+            throw GeminiFailure("O Gemini não respondeu.")
         }
-        throw failure
+        if (status == 401 || status == 403 || (status == 400 && "API_KEY_INVALID" in text)) {
+            throw GeminiFailure("A chave do Gemini foi recusada. Confira em Ajustes.", fatal = true)
+        }
+        if (status == 429) throw GeminiFailure("O limite grátis do Gemini foi atingido.")
+        if (status != 200) throw GeminiFailure("O Gemini não respondeu (erro $status).")
+        return try {
+            parseResponse(text, lines)
+        } catch (e: JSONException) {
+            throw GeminiFailure("O Gemini não devolveu a tradução desta música.")
+        }
+    }
+
+    // Com enqueue, cancelar fecha a conexão na hora; uma chamada bloqueante prenderia o resultado do modelo vencedor.
+    private suspend fun Call.await(): Pair<Int, String> = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) = cont.resumeWithException(e)
+            override fun onResponse(call: Call, response: Response) {
+                try {
+                    cont.resume(response.use { it.code to it.body?.string().orEmpty() })
+                } catch (e: IOException) {
+                    cont.resumeWithException(e)
+                }
+            }
+        })
     }
 
     companion object {
-        /** Do melhor para o mais simples; todos com uso grátis em nov/2026. */
-        val MODELS = listOf("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite")
+        /** Todos com uso grátis em nov/2026. O Flash-Lite vem antes do 3.6 por ser o mais rápido. */
+        val MODELS = listOf("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash")
+        private const val HEDGE_MS = 12_000L
+        private const val TOTAL_MS = 45_000L
+
+        /**
+         * Às vezes o Gemini trava sem responder. Se um modelo falhar, ou passar [hedgeMs] sem responder,
+         * chama o próximo sem desistir dos anteriores: vale a primeira tradução que chegar.
+         */
+        suspend fun race(models: List<String>, hedgeMs: Long, ask: suspend (String) -> List<String?>): List<String?> = coroutineScope {
+            // null = passou o tempo de espera e é hora de chamar o próximo modelo.
+            val events = Channel<Result<List<String?>>?>(Channel.UNLIMITED)
+            var started = 0
+            var finished = 0
+            fun startNext() {
+                val model = models[started++]
+                launch {
+                    events.send(try { Result.success(ask(model)) } catch (e: GeminiFailure) { Result.failure(e) })
+                }
+            }
+            launch { while (true) { delay(hedgeMs); events.send(null) } }
+            startNext()
+            var winner: List<String?>? = null
+            while (winner == null) {
+                val event = events.receive()
+                if (event == null) {
+                    if (started < models.size) startNext()
+                    continue
+                }
+                finished++
+                winner = event.getOrNull()
+                if (winner != null) break
+                val failure = event.exceptionOrNull() as GeminiFailure
+                if (failure.fatal) throw failure
+                if (started < models.size) startNext() else if (finished == started) throw failure
+            }
+            coroutineContext.cancelChildren()
+            winner!!
+        }
 
         private val SYSTEM = """
             Você é tradutor literário de letras de música para o português do Brasil. A tradução precisa soar como algo que um brasileiro diria e preservar o sentido, a emoção e a intenção da música.
@@ -98,6 +162,8 @@ class GeminiTranslator(http: OkHttpClient) {
                 .put("safetySettings", JSONArray(safety))
                 .put("generationConfig", JSONObject()
                     .put("temperature", 0.5)
+                    // A análise da música já é pedida na resposta; pensar mais só deixa a tradução mais lenta.
+                    .put("thinkingConfig", JSONObject().put("thinkingLevel", "low"))
                     .put("responseMimeType", "application/json")
                     .put("responseSchema", schema()))
         }
