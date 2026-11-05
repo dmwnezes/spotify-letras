@@ -133,7 +133,6 @@ class MainActivity : ComponentActivity() {
                             onEnsurePlaying = vm::ensurePlaying,
                             onExit = { recordMode.value = false },
                             onSetShowTranslation = vm::setShowTranslation,
-                        onSetTranslationOnly = vm::setTranslationOnly,
                             onSetTranslationOnly = vm::setTranslationOnly,
                         )
                     } else if (splash) {
