@@ -69,7 +69,7 @@ fun LoginScreen(
     ) {
         Text("Sintonia", color = Palette.ink, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
         Text(
-            "A letra acompanhando a música, com um visualizer que dança junto.",
+            "A letra acompanhando a música, com um visualizer nas cores da capa.",
             color = Palette.ink.copy(alpha = 0.75f), fontSize = 17.sp,
         )
         Spacer(Modifier.height(36.dp))

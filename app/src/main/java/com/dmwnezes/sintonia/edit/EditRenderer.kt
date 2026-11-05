@@ -7,6 +7,10 @@ import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
+import android.text.TextUtils
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.min
@@ -17,12 +21,12 @@ import kotlin.math.sin
  * leve curvatura, rasgos de fita VHS, granulado e um movimento suave.
  * Não depende de Compose: serve para a tela ao vivo e para gerar vídeo.
  */
-class EditRenderer(typeface: Typeface, private val density: Float) : StyleRenderer {
+class EditRenderer(typeface: Typeface, private val density: Float) {
 
     /** Altura (0–1) onde fica o centro do bloco de letra. No modo gravar ele desce para dar lugar à capa. */
-    override var centerFraction = 0.42f
+    var centerFraction = 0.42f
     /** Largura máxima do texto (0–1 da tela). */
-    override var maxWidthFraction = 0.84f
+    var maxWidthFraction = 0.84f
 
     companion object {
         val BG = Color.rgb(6, 5, 5)
@@ -37,6 +41,13 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
         textAlign = Paint.Align.LEFT
         letterSpacing = -0.01f
     }
+    private val translationPaint = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+        this.typeface = typeface
+        fontVariationSettings = "'wght' 600"
+    }
+    private var translationLayout: StaticLayout? = null
+    private var translationFor: String? = null
+    private var translationWidth = 0
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
     private val vignette = Paint()
@@ -48,9 +59,11 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
 
     private var pages: List<EditPage> = emptyList()
 
-    override fun setLines(lines: List<com.dmwnezes.sintonia.lyrics.LyricLine>) { pages = EditLayout.pages(lines) }
+    fun setLines(lines: List<com.dmwnezes.sintonia.lyrics.LyricLine>, translations: List<String?>? = null) {
+        pages = EditLayout.pages(lines, translations)
+    }
 
-    override fun draw(c: Canvas, w: Float, h: Float, posMs: Long, tSec: Float) =
+    fun draw(c: Canvas, w: Float, h: Float, posMs: Long, tSec: Float) =
         draw(c, w, h, EditLayout.pageAt(pages, posMs), posMs, tSec)
 
     fun draw(c: Canvas, w: Float, h: Float, page: EditPage?, posMs: Long, tSec: Float) {
@@ -118,13 +131,36 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
             line.strokeWidth = 0.8f * density
             c.drawLine(-w, tear.y + tear.height, w * 2, tear.y + tear.height, line)
         }
-        if (page.backing.isNotEmpty()) drawBacking(c, w, page.backing, top + blockH + size * 0.22f, size, posMs, exit)
+        val backingBottom = if (page.backing.isNotEmpty()) drawBacking(c, w, page.backing, top + blockH + size * 0.22f, size, posMs, exit) else top + blockH
+        page.translation?.let { drawTranslation(c, w, it, backingBottom + w * 0.035f, page, posMs, exit) }
         c.restore()
         text.textSkewX = 0f
     }
 
-    /** Backing vocals embaixo do bloco: menores, mais apagados, acendendo palavra por palavra (sem parênteses). */
-    private fun drawBacking(c: Canvas, w: Float, words: List<EditWord>, top: Float, mainSize: Float, posMs: Long, exit: Float) {
+    /** Tradução embaixo de tudo, com tamanho fixo: não acompanha os pedaços grandes da letra nem pisca entre os blocos da linha. */
+    private fun drawTranslation(c: Canvas, w: Float, translation: String, top: Float, page: EditPage, posMs: Long, exit: Float) {
+        val width = (w * maxWidthFraction).toInt()
+        translationPaint.textSize = w * 0.048f
+        if (translationFor != translation || translationWidth != width) {
+            translationLayout = StaticLayout.Builder.obtain(translation, 0, translation.length, translationPaint, width)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setMaxLines(3)
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .build()
+            translationFor = translation
+            translationWidth = width
+        }
+        val fadeIn = ((posMs - page.lineStartMs) / REVEAL_MS).coerceIn(0f, 1f)
+        val alpha = fadeIn * if (page.lastOfLine) exit else 1f
+        translationPaint.color = Color.argb((235 * alpha).toInt(), 242, 226, 202)
+        c.save()
+        c.translate((w - width) / 2, top)
+        translationLayout?.draw(c)
+        c.restore()
+    }
+
+    /** Backing vocals embaixo do bloco: menores, mais apagados, acendendo palavra por palavra (sem parênteses). Devolve onde terminam. */
+    private fun drawBacking(c: Canvas, w: Float, words: List<EditWord>, top: Float, mainSize: Float, posMs: Long, exit: Float): Float {
         val bs = mainSize * 0.42f
         text.textSize = bs
         text.textSkewX = -0.12f
@@ -152,6 +188,7 @@ class EditRenderer(typeface: Typeface, private val density: Float) : StyleRender
                 xx += text.measureText(wd.text) + space
             }
         }
+        return top + bs * (1.1f + (rows.size - 1) * 1.15f + 0.35f)
     }
 
     private fun drawChunks(

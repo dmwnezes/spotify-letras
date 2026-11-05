@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Typeface
 import com.dmwnezes.sintonia.edit.EditLayout
 import com.dmwnezes.sintonia.edit.EditRenderer
+import com.dmwnezes.sintonia.edit.LyricsMode
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -43,6 +44,39 @@ class EditStyleTest {
         pages.zipWithNext().forEach { (a, b) -> assertTrue(a.endMs <= b.startMs) }
         assertNull(EditLayout.pageAt(pages, 500))
         assertTrue(EditLayout.pageAt(pages, 1_200)!!.chunks.first().text.startsWith("você"))
+    }
+
+    @Test
+    fun translationStaysWithItsLineAcrossPages() {
+        val tr = listOf("You know it's not the same as before", null, "And I waited all night for you")
+        val pages = EditLayout.pages(lines, tr)
+        val first = pages.filter { it.translation == tr[0] }
+        assertTrue(first.size >= 2)
+        assertTrue(first.all { it.lineStartMs == first.first().startMs })
+        assertEquals(listOf(first.last()), first.filter { it.lastOfLine })
+        assertNull(pages.first { "como era" in it.chunks.first().text }.translation)
+        assertNull(EditLayout.pages(lines).first().translation)
+    }
+
+    @Test
+    fun removedStyleFallsBackToEdit() {
+        assertEquals(LyricsMode.EDIT, LyricsMode.from("COLAGEM"))
+        assertEquals(LyricsMode.CLASSICO, LyricsMode.from("CLASSICO"))
+    }
+
+    @Test
+    fun translationIsDrawnOnlyWhenPresent() {
+        val tf = Typeface.createFromFile(File("src/main/res/font/montserrat.ttf"))
+        val out = File("build/frames/edit").apply { mkdirs() }
+        fun frame(tr: List<String?>?): Bitmap {
+            val r = EditRenderer(tf, 2f)
+            r.setLines(lines, tr)
+            return Bitmap.createBitmap(720, 1280, Bitmap.Config.ARGB_8888).also { r.draw(Canvas(it), 720f, 1280f, 2_700L, 2.7f) }
+        }
+        val plain = frame(null)
+        val translated = frame(listOf("Você sabe que isso não é mais como antes, e nunca mais vai ser como era", null, null))
+        File(out, "traducao.png").outputStream().use { translated.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        assertTrue(!plain.sameAs(translated))
     }
 
     @Test

@@ -132,7 +132,6 @@ class MainActivity : ComponentActivity() {
                             onRestartSong = vm::restartAndPlay,
                             onEnsurePlaying = vm::ensurePlaying,
                             onExit = { recordMode.value = false },
-                            onSetLyricsMode = vm::setLyricsMode,
                         )
                     } else if (splash) {
                         SplashCredits(onDone = { splash = false })
@@ -237,7 +236,6 @@ class MainActivity : ComponentActivity() {
                         onNext = vm::next,
                         onPrevious = vm::previous,
                         onSeek = vm::seek,
-                        onSetRealViz = vm::setRealAudioViz,
                         onSetVizTheme = vm::setVizTheme,
                         onNudgeOffset = vm::nudgeOffset,
                         onSetPlayerOnly = vm::setPlayerOnly,

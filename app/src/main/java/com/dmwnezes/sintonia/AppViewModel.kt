@@ -40,7 +40,6 @@ data class UiState(
     val colors: TrackColors = TrackColors.Default,
     val translation: TranslationState = TranslationState.None,
     // preferências
-    val realAudioViz: Boolean = true,
     val vizTheme: VizTheme = VizTheme.BRILHOS,
     val playerOnly: Boolean = false,
     val showTranslation: Boolean = true,
@@ -54,7 +53,7 @@ data class UiState(
     val message: String? = null,
 ) {
     /** Letra num dos estilos animados (não o Clássico). */
-    val editStyle: Boolean get() = lyricsMode.animated
+    val editStyle: Boolean get() = lyricsMode == com.dmwnezes.sintonia.edit.LyricsMode.EDIT
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -86,7 +85,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun baseState() = UiState(
         clientId = prefs.clientId,
         loggedIn = prefs.isLoggedIn,
-        realAudioViz = prefs.realAudioViz,
         vizTheme = VizTheme.from(prefs.vizTheme),
         playerOnly = prefs.playerOnly,
         showTranslation = prefs.showTranslation,
@@ -171,11 +169,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun showMessage(m: String) = _local.update { it.copy(message = m) }
 
     // ---------- Preferências ----------
-
-    fun setRealAudioViz(on: Boolean) {
-        prefs.realAudioViz = on
-        _local.update { it.copy(realAudioViz = on) }
-    }
 
     fun setVizTheme(t: VizTheme) {
         prefs.vizTheme = t.name

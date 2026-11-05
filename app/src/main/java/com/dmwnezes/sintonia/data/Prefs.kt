@@ -31,10 +31,6 @@ class Prefs(context: Context) {
         get() = sp.getString("pkce_state", null)
         set(v) = sp.edit().putString("pkce_state", v).apply()
 
-    var realAudioViz: Boolean
-        get() = sp.getBoolean("viz_real", true)
-        set(v) = sp.edit().putBoolean("viz_real", v).apply()
-
     /** Mostrar só o player (capa grande), sem a letra. */
     var playerOnly: Boolean
         get() = sp.getBoolean("player_only", false)
@@ -65,7 +61,7 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("karaoke", true)
         set(v) = sp.edit().putBoolean("karaoke", v).apply()
 
-    /** Estilo da letra: EDIT, VIDRO, CILINDRO, COLAGEM ou CLASSICO. */
+    /** Estilo da letra: EDIT ou CLASSICO. */
     var lyricsMode: String
         get() = sp.getString("lyrics_mode", "EDIT") ?: "EDIT"
         set(v) = sp.edit().putString("lyrics_mode", v).apply()

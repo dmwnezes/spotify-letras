@@ -15,6 +15,7 @@ data class EditChunk(val words: List<EditWord>) {
 /**
  * Um bloco de até 3 pedaços empilhados; a tela limpa quando muda de bloco.
  * [backing] são os backing vocals que aparecem embaixo, menores; [backingOnly] = o bloco inteiro é backing vocal.
+ * [translation] é a tradução da linha inteira: fica igual em todos os blocos da linha, de [lineStartMs] até o fim de quem tem [lastOfLine].
  */
 data class EditPage(
     val chunks: List<EditChunk>,
@@ -22,6 +23,9 @@ data class EditPage(
     val endMs: Long,
     val backing: List<EditWord> = emptyList(),
     val backingOnly: Boolean = false,
+    val translation: String? = null,
+    val lineStartMs: Long = startMs,
+    val lastOfLine: Boolean = true,
 )
 
 /**
@@ -42,7 +46,7 @@ object EditLayout {
         "el", "la", "los", "las", "y", "mi", "tu", "en", "con",
     )
 
-    fun pages(lines: List<LyricLine>): List<EditPage> {
+    fun pages(lines: List<LyricLine>, translations: List<String?>? = null): List<EditPage> {
         val out = mutableListOf<EditPage>()
         lines.forEachIndexed { i, line ->
             if (line.text.isBlank() && !line.backingOnly) return@forEachIndexed
@@ -66,7 +70,12 @@ object EditLayout {
                 val endOfGroup = if (!last) groups[g + 1].first().words.first().startMs
                 else minOf(next ?: Long.MAX_VALUE, sungUntil + HOLD_MS)
                 // Os backing vocals aparecem embaixo do último bloco da linha.
-                out += EditPage(group, start, endOfGroup, backing = if (last) backing else emptyList())
+                out += EditPage(
+                    group, start, endOfGroup, backing = if (last) backing else emptyList(),
+                    translation = translations?.getOrNull(i)?.takeIf { it.isNotBlank() },
+                    lineStartMs = groups.first().first().words.first().startMs,
+                    lastOfLine = last,
+                )
             }
         }
         // Garante que um bloco nunca passa por cima do seguinte.

@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Videocam
@@ -41,27 +40,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dmwnezes.sintonia.R
 import com.dmwnezes.sintonia.edit.LyricsMode
 import com.dmwnezes.sintonia.viz.VizTheme
 
-private val InterFamily by lazy { FontFamily(Font(R.font.inter, FontWeight.Bold)) }
-private val ArchivoFamily by lazy { FontFamily(Font(R.font.archivo, FontWeight.Black)) }
-
 /** Mini prévia de cada estilo: cores e fonte que lembram o estilo. */
-private data class StylePreview(val bg: Brush, val ink: Color, val family: FontFamily, val text: String, val italic: Boolean = false, val glow: Color? = null)
+private data class StylePreview(val bg: Brush, val ink: Color, val family: FontFamily, val text: String, val glow: Color? = null)
 
 private fun previewFor(m: LyricsMode, accent: Color): StylePreview = when (m) {
     LyricsMode.EDIT -> StylePreview(Brush.verticalGradient(listOf(Color(0xFF0A0808), Color(0xFF060505))), Color(0xFFF2E2CA), Montserrat, "Aa", glow = Color(0xFFFFCC91))
-    LyricsMode.VIDRO -> StylePreview(Brush.linearGradient(listOf(Color(0xFF6A46DC), Color(0xFFC43C6E), Color(0xFFDC5A46))), Color.White, InterFamily, "Aa", italic = true)
-    LyricsMode.CILINDRO -> StylePreview(Brush.radialGradient(listOf(Color(0xFF4A3F38), Color(0xFF141414))), Color.White, Montserrat, "Aa")
-    LyricsMode.COLAGEM -> StylePreview(Brush.linearGradient(listOf(Color(0xFF9C2A22), Color(0xFF3A100D))), Color(0xFFF3E9DA), ArchivoFamily, "AA")
     LyricsMode.CLASSICO -> StylePreview(Brush.linearGradient(listOf(accent.copy(alpha = 0.8f), Color(0xFF1C1430))), Color.White, FontFamily.Default, "Aa")
 }
 
@@ -75,7 +65,6 @@ fun LyricsOptionsSheet(
     mode: LyricsMode,
     accent: Color,
     karaoke: Boolean,
-    realViz: Boolean,
     vizTheme: VizTheme,
     playerOnly: Boolean,
     onMode: (LyricsMode) -> Unit,
@@ -83,7 +72,6 @@ fun LyricsOptionsSheet(
     onNote: () -> Unit,
     onTune: () -> Unit,
     onKaraoke: (Boolean) -> Unit,
-    onRealViz: (Boolean) -> Unit,
     onVizTheme: (VizTheme) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -94,7 +82,7 @@ fun LyricsOptionsSheet(
         contentColor = Color.White,
         dragHandle = { Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(40.dp, 5.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) },
     ) {
-        LyricsOptionsContent(mode, accent, karaoke, realViz, vizTheme, playerOnly, onMode, onRecord, onNote, onTune, onKaraoke, onRealViz, onVizTheme, onDismiss)
+        LyricsOptionsContent(mode, accent, karaoke, vizTheme, playerOnly, onMode, onRecord, onNote, onTune, onKaraoke, onVizTheme, onDismiss)
     }
 }
 
@@ -104,7 +92,6 @@ fun LyricsOptionsContent(
     mode: LyricsMode,
     accent: Color,
     karaoke: Boolean,
-    realViz: Boolean,
     vizTheme: VizTheme,
     playerOnly: Boolean,
     onMode: (LyricsMode) -> Unit,
@@ -112,7 +99,6 @@ fun LyricsOptionsContent(
     onNote: () -> Unit,
     onTune: () -> Unit,
     onKaraoke: (Boolean) -> Unit,
-    onRealViz: (Boolean) -> Unit,
     onVizTheme: (VizTheme) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -135,7 +121,6 @@ fun LyricsOptionsContent(
                 if (!playerOnly && mode == LyricsMode.CLASSICO) {
                     Spacer(Modifier.height(16.dp))
                     ToggleRow(Icons.Rounded.TextFields, "Acender palavra por palavra", karaoke, accent, onKaraoke)
-                    ToggleRow(Icons.Rounded.GraphicEq, "Visualizer reage ao som", realViz, accent, onRealViz)
                     Text("Tema do visualizer", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(VizTheme.entries) { t -> AppChip(t.label, t == vizTheme, { onVizTheme(t) }) }
@@ -160,7 +145,6 @@ private fun StyleCard(m: LyricsMode, selected: Boolean, accent: Color, onClick: 
         ) {
             Text(
                 pv.text, color = pv.ink, fontFamily = pv.family, fontSize = 34.sp, fontWeight = FontWeight.Black,
-                fontStyle = if (pv.italic) FontStyle.Italic else FontStyle.Normal,
                 style = TextStyle(shadow = pv.glow?.let { androidx.compose.ui.graphics.Shadow(it, blurRadius = 24f) }),
             )
             if (selected) Box(

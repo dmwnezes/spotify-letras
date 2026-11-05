@@ -54,12 +54,11 @@ class ScreensRenderTest {
     @Test
     fun visualizerThemes() {
         var theme = VizTheme.BRILHOS
-        val levels = FloatArray(48) { i -> (0.85f * kotlin.math.exp(-i / 18f) + 0.15f * (0.5f + 0.5f * sin(i * 0.9f))).toFloat() }
         rule.mainClock.autoAdvance = false
         val state = androidx.compose.runtime.mutableStateOf(theme)
         rule.setContent {
             AppBackground(colors) {
-                Box(Modifier.size(360.dp, 640.dp)) { VisualizerCanvas(colors, true, { levels }, theme = state.value) }
+                Box(Modifier.size(360.dp, 640.dp)) { VisualizerCanvas(colors, true, theme = state.value) }
             }
         }
         for (t in VizTheme.entries) {
@@ -94,7 +93,7 @@ class ScreensRenderTest {
             now = NowPlaying(track, true, 6200, SystemClock.elapsedRealtime()),
             lyrics = LyricsState.Ready(Lyrics.Synced(lines)),
             translation = TranslationState.Ready("inglês", tr),
-            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), realAudioViz = false, showTranslation = true, lyricsMode = if (edit) com.dmwnezes.sintonia.edit.LyricsMode.EDIT else com.dmwnezes.sintonia.edit.LyricsMode.CLASSICO,
+            colors = colors.copy(soft1 = Color(0xFFF6E3F0), soft2 = Color(0xFFE3E6FF)), showTranslation = true, lyricsMode = if (edit) com.dmwnezes.sintonia.edit.LyricsMode.EDIT else com.dmwnezes.sintonia.edit.LyricsMode.CLASSICO,
         )
         rule.setContent {
             androidx.compose.runtime.CompositionLocalProvider(
@@ -104,7 +103,7 @@ class ScreensRenderTest {
             ) {
                 MaterialTheme(colorScheme = darkColorScheme(primary = Color.White)) {
                     AppBackground(state.colors) {
-                        LyricsScreen(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, PaddingValues())
+                        LyricsScreen(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, PaddingValues())
                     }
                 }
             }

@@ -1,10 +1,6 @@
 package com.dmwnezes.sintonia.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.SystemClock
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
@@ -55,7 +51,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.dmwnezes.sintonia.share.NowPlayingCard
 import com.dmwnezes.sintonia.share.NowPlayingInfo
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -95,7 +90,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.dmwnezes.sintonia.LyricsState
 import com.dmwnezes.sintonia.TranslationState
@@ -104,15 +98,14 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
+import com.dmwnezes.sintonia.edit.EditLyricsView
 import com.dmwnezes.sintonia.edit.LyricsMode
-import com.dmwnezes.sintonia.edit.StyledLyricsView
 import androidx.compose.runtime.CompositionLocalProvider
 import com.dmwnezes.sintonia.lyrics.WordTiming
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.lerp
-import com.dmwnezes.sintonia.viz.AudioSpectrum
 import com.dmwnezes.sintonia.viz.VizTheme
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -131,7 +124,6 @@ fun LyricsScreen(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onSeek: (Long) -> Unit,
-    onSetRealViz: (Boolean) -> Unit,
     onSetVizTheme: (VizTheme) -> Unit,
     onNudgeOffset: (Long) -> Unit,
     onRetryLyrics: () -> Unit,
@@ -151,34 +143,7 @@ fun LyricsScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    // ----- Visualizer: áudio real ou animação -----
-    var hasMic by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-    }
-    var showMicDialog by rememberSaveable { mutableStateOf(false) }
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasMic = granted
-        if (!granted) onSetRealViz(false)
-    }
-    LaunchedEffect(state.realAudioViz, hasMic) {
-        if (state.realAudioViz && !hasMic) showMicDialog = true
-    }
-
     val playing = state.now?.isPlaying == true
-    val spectrum = remember { AudioSpectrum() }
-    val useReal = state.realAudioViz && hasMic
-    var vizUnavailable by remember { mutableStateOf(false) }
-    DisposableEffect(useReal) {
-        vizUnavailable = useReal && !spectrum.start()
-        onDispose { spectrum.stop() }
-    }
-    LaunchedEffect(useReal, playing) {
-        while (useReal && playing) {
-            delay(1000)
-            val quietFor = System.currentTimeMillis() - max(spectrum.lastSoundAtMs, spectrum.startedAtMs)
-            vizUnavailable = quietFor > 6000
-        }
-    }
 
     val translations: List<String?>? =
         (state.translation as? TranslationState.Ready)?.lines?.takeIf { state.showTranslation }
@@ -192,12 +157,10 @@ fun LyricsScreen(
     CompositionLocalProvider(LocalAppPalette provides if (editLines != null) DarkPalette else LocalAppPalette.current) {
     Box(Modifier.fillMaxSize()) {
         if (editLines != null) {
-            StyledLyricsView(
-                mode = state.lyricsMode,
+            EditLyricsView(
                 lines = editLines,
+                translations = translations,
                 positionMs = { (nowForEdit?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offsetForEdit + 120 },
-                coverUrl = state.now?.track?.imageUrl,
-                colors = state.colors,
             )
             // Sombra suave em cima e embaixo: o cabeçalho e os controles ficam legíveis em qualquer estilo.
             Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -209,7 +172,6 @@ fun LyricsScreen(
                 colors = state.colors,
                 playing = playing,
                 theme = state.vizTheme,
-                source = { if (useReal && !vizUnavailable) spectrum.levels else null },
             )
             // Véu escuro para a letra ficar legível sobre os brilhos.
             Box(Modifier.fillMaxSize().background(Palette.scrim.copy(alpha = if (Palette.dark) 0.28f else 0.42f)))
@@ -244,13 +206,7 @@ fun LyricsScreen(
                         translation = state.translation,
                         showTranslation = state.showTranslation,
                         onToggleTranslation = { onSetShowTranslation(!state.showTranslation) },
-                        realViz = state.realAudioViz,
                         theme = state.vizTheme,
-                        vizUnavailable = vizUnavailable && useReal,
-                        onSetRealViz = { on ->
-                            onSetRealViz(on)
-                            if (on && !hasMic) showMicDialog = true
-                        },
                         onSetTheme = onSetVizTheme,
                         karaoke = state.karaoke,
                         onSetKaraoke = onSetKaraoke,
@@ -299,32 +255,6 @@ fun LyricsScreen(
     }
 
     } // CompositionLocalProvider
-
-    if (showMicDialog) {
-        AlertDialog(
-            onDismissRequest = { showMicDialog = false },
-            title = { Text("Visualizer com o som real") },
-            text = {
-                Text(
-                    "Para o visualizer reagir à música, o Android pede a permissão de \"gravar áudio\". " +
-                        "O Sintonia só lê a intensidade do som que sai do celular para animar as cores. " +
-                        "Nada é gravado nem enviado."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showMicDialog = false
-                    micLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }) { Text("Permitir") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showMicDialog = false
-                    onSetRealViz(false)
-                }) { Text("Usar modo animado") }
-            },
-        )
-    }
 }
 
 @Composable
@@ -365,10 +295,7 @@ private fun TrackHeader(
     translation: TranslationState,
     showTranslation: Boolean,
     onToggleTranslation: () -> Unit,
-    realViz: Boolean,
     theme: VizTheme,
-    vizUnavailable: Boolean,
-    onSetRealViz: (Boolean) -> Unit,
     onSetTheme: (VizTheme) -> Unit,
     karaoke: Boolean,
     onSetKaraoke: (Boolean) -> Unit,
@@ -417,7 +344,6 @@ private fun TrackHeader(
             mode = lyricsMode,
             accent = accent,
             karaoke = karaoke,
-            realViz = realViz,
             vizTheme = theme,
             playerOnly = playerOnly,
             onMode = onSetLyricsMode,
@@ -425,7 +351,6 @@ private fun TrackHeader(
             onNote = onNote,
             onTune = onTune,
             onKaraoke = onSetKaraoke,
-            onRealViz = onSetRealViz,
             onVizTheme = onSetTheme,
             onDismiss = { menu = false },
         )
@@ -438,13 +363,6 @@ private fun TrackHeader(
         }
         if (showTranslation && status != null && !playerOnly) {
             Text(status, color = Palette.ink.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp, end = 12.dp))
-        }
-        if (vizUnavailable) {
-            Text(
-                "Sem leitura do som agora (volume zerado ou bloqueio do aparelho). Usando a animação.",
-                color = Palette.ink.copy(alpha = 0.55f), fontSize = 12.sp,
-                modifier = Modifier.padding(top = 6.dp, end = 12.dp),
-            )
         }
     }
 }

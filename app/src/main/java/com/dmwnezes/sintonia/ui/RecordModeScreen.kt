@@ -59,8 +59,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.dmwnezes.sintonia.LyricsState
 import com.dmwnezes.sintonia.UiState
-import com.dmwnezes.sintonia.edit.LyricsMode
-import com.dmwnezes.sintonia.edit.StyledLyricsView
+import com.dmwnezes.sintonia.edit.EditLyricsView
 import com.dmwnezes.sintonia.edit.EditRenderer
 import com.dmwnezes.sintonia.lyrics.Lyrics
 import kotlinx.coroutines.delay
@@ -69,14 +68,6 @@ private val Cream = Color(EditRenderer.CREAM)
 private val Black = Color(EditRenderer.BG)
 
 private enum class Phase { SETUP, COUNTDOWN, LIVE }
-
-/** O Clássico não é animado; na gravação ele vira o Edit. */
-private fun recordStyle(m: LyricsMode) = if (m.animated) m else LyricsMode.EDIT
-
-/** Sombra leve para o texto ficar legível também sobre fundos claros (estilo Colagem). */
-private val Legible = androidx.compose.ui.text.TextStyle(
-    shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(0f, 2f), 10f),
-)
 
 /**
  * Modo gravar para Stories: tela cheia, sem barras nem botões — só a capa, o nome da música,
@@ -88,7 +79,6 @@ fun RecordModeScreen(
     onRestartSong: () -> Unit,
     onEnsurePlaying: () -> Unit,
     onExit: () -> Unit,
-    onSetLyricsMode: (LyricsMode) -> Unit = {},
     startLive: Boolean = false, // só para pré-visualização/testes
 ) {
     var phase by remember { mutableStateOf(if (startLive) Phase.LIVE else Phase.SETUP) }
@@ -122,8 +112,6 @@ fun RecordModeScreen(
 
         when (phase) {
             Phase.SETUP -> SetupPanel(
-                mode = recordStyle(state.lyricsMode),
-                onMode = onSetLyricsMode,
                 onStart = { fromSong ->
                     fromStart = fromSong
                     phase = Phase.COUNTDOWN
@@ -168,12 +156,9 @@ private fun RecordContent(state: UiState, dim: Boolean) {
         // O fundo animado ocupa a tela inteira; só o texto fica dentro do quadro dos Stories.
         if (lines != null) {
             val frameTop = (maxHeight - frameH) / 2
-            StyledLyricsView(
-                mode = recordStyle(state.lyricsMode),
+            EditLyricsView(
                 lines = lines,
                 positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                coverUrl = track?.imageUrl,
-                colors = state.colors,
                 centerFraction = (frameTop + frameH * 0.605f) / maxHeight,
                 maxWidthFraction = (frameW * 0.74f) / maxWidth,
                 modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
@@ -206,12 +191,12 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                 Text(
                     title,
                     color = Cream, fontFamily = Montserrat, fontWeight = FontWeight.ExtraBold, fontSize = titleSize.sp,
-                    lineHeight = (titleSize * 1.15f).sp, style = Legible,
+                    lineHeight = (titleSize * 1.15f).sp,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 track?.let {
                     Text(
-                        it.artistLine, color = Cream.copy(alpha = 0.8f), fontFamily = Montserrat, fontWeight = FontWeight.Medium, style = Legible,
+                        it.artistLine, color = Cream.copy(alpha = 0.8f), fontFamily = Montserrat, fontWeight = FontWeight.Medium,
                         fontSize = 14.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp),
                     )
@@ -226,7 +211,7 @@ private fun RecordContent(state: UiState, dim: Boolean) {
             }
             Text(
                 "@dmwnezes",
-                color = Cream.copy(alpha = 0.75f), fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, style = Legible,
+                color = Cream.copy(alpha = 0.75f), fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                 letterSpacing = 0.5.sp,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = frameH * (SAFE_BOTTOM - 0.045f)),
             )
@@ -249,7 +234,7 @@ private fun SafeAreaGuide() {
 }
 
 @Composable
-private fun SetupPanel(mode: LyricsMode, onMode: (LyricsMode) -> Unit, onStart: (fromSongStart: Boolean) -> Unit, onExit: () -> Unit) {
+private fun SetupPanel(onStart: (fromSongStart: Boolean) -> Unit, onExit: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
         Column(
             Modifier.padding(24.dp).clip(RoundedCornerShape(26.dp)).background(Color(0xFF15120F)).padding(22.dp),
@@ -261,18 +246,6 @@ private fun SetupPanel(mode: LyricsMode, onMode: (LyricsMode) -> Unit, onStart: 
             Step("3", "Para sair, toque na tela e em \"Sair\", ou use o gesto de voltar. Corte o começo e o fim no editor do Instagram.")
             Step("4", "Tudo fica dentro do quadro dos Stories (pontilhado), longe do perfil, da caixa de resposta e do coração.")
             Spacer(Modifier.height(12.dp))
-            Text("Estilo da letra", color = Cream.copy(alpha = 0.7f), fontSize = 13.sp)
-            Spacer(Modifier.height(6.dp))
-            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-            androidx.compose.foundation.layout.FlowRow(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                LyricsMode.entries.filter { it.animated }.forEach { m ->
-                    AppChip(m.label, selected = m == mode, onClick = { onMode(m) }, tint = Cream, onTint = Color.Black)
-                }
-            }
             Spacer(Modifier.height(16.dp))
             AppButton(
                 onClick = { onStart(true) }, modifier = Modifier.fillMaxWidth().height(50.dp),

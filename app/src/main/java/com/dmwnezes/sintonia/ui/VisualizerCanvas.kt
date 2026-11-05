@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
-import com.dmwnezes.sintonia.viz.AudioSpectrum
 import com.dmwnezes.sintonia.viz.VizTheme
 import kotlin.math.PI
 import kotlin.math.cos
@@ -54,25 +53,22 @@ private class Particles(n: Int) {
     var cursor = 0
 }
 
-/**
- * Visualizer com quatro temas. [source] devolve os níveis reais do áudio (0–1 por faixa)
- * ou null para usar a animação de reserva.
- */
+private const val BANDS = 48
+
+/** Visualizer animado com quatro temas, nas cores da capa. */
 @Composable
 fun VisualizerCanvas(
     colors: TrackColors,
     playing: Boolean,
-    source: () -> FloatArray?,
     modifier: Modifier = Modifier,
     theme: VizTheme = VizTheme.BRILHOS,
 ) {
-    val bands = AudioSpectrum.BANDS
+    val bands = BANDS
     val shown = remember { FloatArray(bands) }
     val peaks = remember { FloatArray(bands) }
     val particles = remember { Particles(160) }
     var time by remember { mutableFloatStateOf(0f) }
     val isPlaying by rememberUpdatedState(playing)
-    val currentSource by rememberUpdatedState(source)
     val currentTheme by rememberUpdatedState(theme)
 
     val g1 by animateColorAsState(colors.glow1, tween(1200), label = "g1")
@@ -85,7 +81,7 @@ fun VisualizerCanvas(
             withFrameNanos { now ->
                 val dt = if (last == 0L) 0.016f else ((now - last) / 1e9f).coerceAtMost(0.1f)
                 last = now
-                val target = currentSource() ?: fallbackLevels(time, isPlaying, bands)
+                val target = fallbackLevels(time, isPlaying, bands)
                 for (i in 0 until bands) {
                     val up = target[i] > shown[i]
                     shown[i] += (target[i] - shown[i]) * min(1f, dt * if (up) 22f else 7f)

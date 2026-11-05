@@ -1,16 +1,13 @@
 # Sintonia
 
-App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer que reage ao som.
+App Android que mostra a letra da música que está tocando no Spotify, sincronizada linha a linha, com um visualizer animado nas cores da capa.
 
 - **Descobrir:** mix do dia com 30 músicas novas a partir do que você ouve, cartões para deslizar com prévia de 30 s, curtidas que vão para a playlist "Sintonia · Descobertas" no Spotify, e recomendações que aprendem com o que você curte ou pula.
-- **Estilos de letra animados** (menu ⋮ → Estilo da letra, ou em Ajustes):
-  - **Edit:** fundo preto, texto creme com brilho, palavras em blocos de 2–3, curvatura, rasgos de fita VHS e granulado.
-  - **Vidro:** fundo em gradiente com as cores da capa e a letra num cilindro 3D; a linha cantada fica nítida e as outras giram para longe, desfocadas.
-  - **Cilindro:** capa desfocada ao fundo e a letra rolando num cilindro, ondulando letra por letra; o que já foi cantado fica branco.
-  - **Colagem:** uma ou duas palavras gigantes por vez, cada trecho com um visual (bloco com aberração cromática, pincel, letras recortadas, contorno à mão, palavra no chão, letra riscada), com zoom, tremida e granulado de filme.
+- **Estilos de letra** (menu ⋮ → Estilo da letra, ou em Ajustes):
+  - **Edit:** fundo preto, texto creme com brilho, palavras em blocos de 2–3, curvatura, rasgos de fita VHS e granulado. A tradução aparece embaixo da letra quando está ligada.
   - **Clássico:** a lista de linhas com o visualizer.
 - **Letras:** letra sincronizada ou modo só player (capa grande), visualizer com 4 temas (Brilhos, Ondas, Partículas, Retrô) e controles.
-- **Backing vocals:** o que vem entre parênteses na letra aparece sem os parênteses, menor e logo abaixo da linha principal (como no Apple Music), em todos os estilos.
+- **Backing vocals:** o que vem entre parênteses na letra aparece sem os parênteses, menor e logo abaixo da linha principal (como no Apple Music).
 - **Karaokê:** a linha atual acende palavra por palavra (com a marcação real quando existe, ou estimada).
 - **Buscar (aba própria):** procure qualquer música e toque no Spotify na hora (se o Spotify estiver fechado, o app abre ele direto na música) ou coloque na fila; guarda as buscas recentes.
 - **Barra de tempo:** arraste ou toque na barra do player para pular para qualquer parte da música.
@@ -21,7 +18,7 @@ App Android que mostra a letra da música que está tocando no Spotify, sincroni
 - **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha. Com uma chave grátis do Gemini (Ajustes), a IA lê a letra inteira e traduz com o contexto da música; sem chave ou sem conexão, usa o tradutor do celular (ML Kit).
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
-- **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo escolhido (Edit, Vidro, Cilindro ou Colagem) e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
+- **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo Edit e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.
 - **Compartilhar:** cartão "tocando agora" para Stories.
 - **Perfil:** artistas, músicas e gêneros mais ouvidos (dados ao vivo do Spotify).
 - **Histórico:** lê o "Histórico de streaming estendido" do Spotify e mostra estatísticas ano a ano, recordes, descobertas, uma retrospectiva em texto e outra animada estilo Stories. Exporta um resumo em texto (para mandar ao Claude) ou um backup .json.
@@ -51,7 +48,6 @@ Se o login der erro 403, abra **User Management** no painel do app e adicione o 
 - **Recomendações:** artistas parecidos, rádios de artista e prévias vêm da API pública do [Deezer](https://developers.deezer.com/api) (sem chave); as músicas são achadas no Spotify pelo ISRC ou por título e artista, e tocam lá.
 - **Letras:** vêm do [LRCLIB](https://lrclib.net), base aberta e gratuita de letras sincronizadas.
 - **Música tocando:** o app consulta a Web API do Spotify a cada ~2 s e estima a posição entre uma consulta e outra.
-- **Visualizer:** usa o recurso do Android que lê o espectro do som que sai do celular. Por isso pede a permissão de "gravar áudio" — nada é gravado nem enviado. Se o aparelho bloquear, cai para uma animação nas cores da capa.
 - **Ajuste de sincronia:** o botão de ajuste (ícone de controles) adianta ou atrasa a letra em passos de 0,25 s.
 
 ## Histórico completo
@@ -70,7 +66,7 @@ app/src/main/java/com/dmwnezes/sintonia/
 ├── AppGraph.kt            peças compartilhadas (login, Spotify, letras)
 ├── Playback.kt            o que está tocando, letra, cores e tradução
 ├── AppViewModel.kt        estado das telas e preferências
-├── edit/                  estilos animados da letra (Edit, Vidro, Cilindro, Colagem)
+├── edit/                  estilo Edit da letra
 ├── reco/                  recomendações (Deezer, pontuação, aprendizado, prévias)
 ├── live/                  notificação da tela de bloqueio e widget
 ├── translate/             tradução com o Gemini e reserva no celular (ML Kit)

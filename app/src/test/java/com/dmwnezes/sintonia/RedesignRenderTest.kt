@@ -153,7 +153,7 @@ class RedesignRenderTest {
         save("buscar-vazio")
     }
 
-    @Test fun optionsSheet() = sheet(LyricsMode.VIDRO, "menu-opcoes")
+    @Test fun optionsSheet() = sheet(LyricsMode.EDIT, "menu-opcoes")
     @Test fun optionsSheetClassic() = sheet(LyricsMode.CLASSICO, "menu-classico")
 
     private fun sheet(mode: LyricsMode, name: String) {
@@ -161,7 +161,7 @@ class RedesignRenderTest {
             AppBackground(colors) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                     Box(Modifier.background(Color(0xFF15121B), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).padding(top = 20.dp)) {
-                        LyricsOptionsContent(mode, accent, true, true, VizTheme.BRILHOS, false, {}, {}, {}, {}, {}, {}, {}, {})
+                        LyricsOptionsContent(mode, accent, true, VizTheme.BRILHOS, false, {}, {}, {}, {}, {}, {}, {})
                     }
                 }
             }
