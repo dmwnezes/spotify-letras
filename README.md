@@ -15,7 +15,7 @@ App Android que mostra a letra da música que está tocando no Spotify, sincroni
 - **Botões:** pílulas com gradiente, brilho e sombra na cor da música, que afundam com mola ao tocar.
 - **Aparência:** tema claro, escuro ou automático (cores tiradas da capa) e fonte/tamanho da letra.
 - **Atalhos:** segure o ícone do app para abrir Letra, Buscar, Caderno ou Quiz.
-- **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha. Com uma chave grátis do Gemini (Ajustes), a IA lê a letra inteira e traduz com o contexto da música; sem chave ou sem conexão, usa o tradutor do celular (ML Kit).
+- **Tradução:** letras em outro idioma ganham a tradução em português abaixo de cada linha. Com uma chave grátis do Gemini (Ajustes), a IA lê a letra inteira e traduz com o contexto da música; sem chave ou sem conexão, usa o tradutor do celular (ML Kit). No menu ⋮ e no Modo gravar dá para escolher entre letra e tradução, só tradução (com o efeito das palavras acendendo) ou sem tradução.
 - **Tela de bloqueio e widget:** a linha atual aparece numa notificação e num widget da tela inicial.
 - **Caderno:** segure uma linha para salvar o trecho, compartilhar como imagem ou anotar um momento no diário musical.
 - **Modo gravar para Stories:** tela cheia e limpa, só com a capa, o nome da música, a letra no estilo Edit e @dmwnezes, para gravar com o gravador de tela do celular (com o áudio). Contagem de 3 s e opção de começar a música do início.

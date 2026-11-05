@@ -6,6 +6,8 @@ import android.graphics.Typeface
 import com.dmwnezes.sintonia.edit.EditLayout
 import com.dmwnezes.sintonia.edit.EditRenderer
 import com.dmwnezes.sintonia.edit.LyricsMode
+import com.dmwnezes.sintonia.lyrics.TranslatedLyrics
+import com.dmwnezes.sintonia.lyrics.Word
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -56,6 +58,22 @@ class EditStyleTest {
         assertEquals(listOf(first.last()), first.filter { it.lastOfLine })
         assertNull(pages.first { "como era" in it.chunks.first().text }.translation)
         assertNull(EditLayout.pages(lines).first().translation)
+    }
+
+    @Test
+    fun translationOnlyRevealsTranslatedWordsInTheOriginalTime() {
+        val real = LyricLine(1000, "you know", words = listOf(Word(1000, "you "), Word(1500, "know ")), backing = "oh")
+        val shown = TranslatedLyrics.only(listOf(real, LyricLine(9000, "same"), LyricLine(12000, "again")), listOf("você sabe bem", "", null))
+        assertEquals("você sabe bem", shown[0].text)
+        assertEquals(listOf("você ", "sabe ", "bem"), shown[0].words!!.map { it.text })
+        assertEquals(1000L, shown[0].words!!.first().startMs)
+        assertTrue(shown[0].words!!.zipWithNext().all { (a, b) -> a.startMs < b.startMs })
+        assertNull(shown[0].backing)
+        // Sem tradução, a linha fica como está.
+        assertEquals("same", shown[1].text)
+        assertEquals("again", shown[2].text)
+        val page = EditLayout.pages(shown).first()
+        assertTrue(page.chunks.joinToString(" ") { it.text } == "você sabe bem")
     }
 
     @Test

@@ -146,4 +146,35 @@ class ScreensRenderTest {
         rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}, startLive = true) }
         save("modo-gravar-alto")
     }
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xhdpi")
+    fun recordModeWithTranslation() = recordTranslated(only = false, name = "modo-gravar-traducao")
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xhdpi")
+    fun recordModeTranslationOnly() = recordTranslated(only = true, name = "modo-gravar-so-traducao")
+
+    private fun recordTranslated(only: Boolean, name: String) {
+        rule.mainClock.autoAdvance = false
+        val lines = listOf(LyricLine(0, "you know it is not the same as it was before my love"), LyricLine(9000, "again"))
+        val translated = listOf("Você sabe que isso não é mais como antes, e nunca mais vai ser como era, meu amor", null)
+        val track = Track("x", "Canção de Teste com um nome bem comprido", listOf("Artista Exemplo"), "Álbum", null, 200_000)
+        val state = UiState(loggedIn = true, firstLoadDone = true, now = NowPlaying(track, true, 2400, SystemClock.elapsedRealtime()),
+            lyrics = LyricsState.Ready(Lyrics.Synced(lines)), translation = com.dmwnezes.sintonia.TranslationState.Ready("inglês", translated),
+            translationOnly = only)
+        rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}, startLive = true) }
+        save(name)
+    }
+
+    @Test
+    fun recordSetupPanel() {
+        rule.mainClock.autoAdvance = false
+        val track = Track("x", "Canção de Teste", listOf("Artista Exemplo"), "Álbum", null, 200_000)
+        val state = UiState(loggedIn = true, firstLoadDone = true, now = NowPlaying(track, true, 2400, SystemClock.elapsedRealtime()),
+            lyrics = LyricsState.Ready(Lyrics.Synced(listOf(LyricLine(0, "you know")))),
+            translation = com.dmwnezes.sintonia.TranslationState.Ready("inglês", listOf("você sabe")))
+        rule.setContent { com.dmwnezes.sintonia.ui.RecordModeScreen(state, {}, {}, {}) }
+        save("modo-gravar-preparar")
+    }
 }

@@ -98,6 +98,7 @@ import com.dmwnezes.sintonia.data.NowPlaying
 import com.dmwnezes.sintonia.lyrics.LrcParser
 import com.dmwnezes.sintonia.lyrics.LyricLine
 import com.dmwnezes.sintonia.lyrics.Lyrics
+import com.dmwnezes.sintonia.lyrics.TranslatedLyrics
 import com.dmwnezes.sintonia.edit.EditLyricsView
 import com.dmwnezes.sintonia.edit.LyricsMode
 import androidx.compose.runtime.CompositionLocalProvider
@@ -131,6 +132,7 @@ fun LyricsScreen(
     onSetShowTranslation: (Boolean) -> Unit,
     bottomPadding: PaddingValues,
     onSetKaraoke: (Boolean) -> Unit = {},
+    onSetTranslationOnly: (Boolean) -> Unit = {},
     onOpenSearch: () -> Unit = {},
     onSetLyricsMode: (LyricsMode) -> Unit = {},
     onRecordMode: () -> Unit = {},
@@ -160,6 +162,7 @@ fun LyricsScreen(
             EditLyricsView(
                 lines = editLines,
                 translations = translations,
+                translationOnly = state.translationOnly,
                 positionMs = { (nowForEdit?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offsetForEdit + 120 },
             )
             // Sombra suave em cima e embaixo: o cabeçalho e os controles ficam legíveis em qualquer estilo.
@@ -206,6 +209,8 @@ fun LyricsScreen(
                         translation = state.translation,
                         showTranslation = state.showTranslation,
                         onToggleTranslation = { onSetShowTranslation(!state.showTranslation) },
+                        translationOnly = state.translationOnly,
+                        onSetTranslationOnly = onSetTranslationOnly,
                         theme = state.vizTheme,
                         onSetTheme = onSetVizTheme,
                         karaoke = state.karaoke,
@@ -221,7 +226,7 @@ fun LyricsScreen(
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         if (editLines == null) Crossfade(state.playerOnly, animationSpec = tween(450), label = "modo") { onlyPlayer ->
                             if (onlyPlayer) BigCover(now)
-                            else LyricsBody(state.lyrics, translations, now, state.lyricsOffsetMs, state.karaoke, onSeek, onRetryLyrics) { picked = it }
+                            else LyricsBody(state.lyrics, translations, state.translationOnly, now, state.lyricsOffsetMs, state.karaoke, onSeek, onRetryLyrics) { picked = it }
                         }
                     }
                     AnimatedVisibility(showTune && !state.playerOnly) {
@@ -295,6 +300,8 @@ private fun TrackHeader(
     translation: TranslationState,
     showTranslation: Boolean,
     onToggleTranslation: () -> Unit,
+    translationOnly: Boolean,
+    onSetTranslationOnly: (Boolean) -> Unit,
     theme: VizTheme,
     onSetTheme: (VizTheme) -> Unit,
     karaoke: Boolean,
@@ -353,6 +360,11 @@ private fun TrackHeader(
             onKaraoke = onSetKaraoke,
             onVizTheme = onSetTheme,
             onDismiss = { menu = false },
+            translationAvailable = translation != TranslationState.None,
+            showTranslation = showTranslation,
+            translationOnly = translationOnly,
+            onShowTranslation = { if (it != showTranslation) onToggleTranslation() },
+            onTranslationOnly = onSetTranslationOnly,
         )
         val status = when (translation) {
             is TranslationState.Loading ->
@@ -409,6 +421,7 @@ private fun BigCover(now: NowPlaying) {
 private fun LyricsBody(
     lyrics: LyricsState,
     translations: List<String?>?,
+    translationOnly: Boolean,
     now: NowPlaying,
     offsetMs: Long,
     karaoke: Boolean,
@@ -427,8 +440,8 @@ private fun LyricsBody(
             }
         }
         is LyricsState.Ready -> when (val l = lyrics.lyrics) {
-            is Lyrics.Synced -> SyncedLyrics(l.lines, translations, now, offsetMs, karaoke, onSeek, onPick)
-            is Lyrics.Plain -> PlainLyrics(l.text, translations, onPick)
+            is Lyrics.Synced -> SyncedLyrics(l.lines, translations, translationOnly, now, offsetMs, karaoke, onSeek, onPick)
+            is Lyrics.Plain -> PlainLyrics(l.text, translations, translationOnly, onPick)
             Lyrics.Instrumental -> Centered { Text("♪  Instrumental", color = Palette.ink, fontSize = 28.sp, fontWeight = FontWeight.Bold) }
             Lyrics.NotFound -> Centered {
                 Text("Não encontrei a letra desta música.", color = Palette.ink.copy(alpha = 0.7f), fontSize = 17.sp, modifier = Modifier.padding(32.dp))
@@ -441,6 +454,7 @@ private fun LyricsBody(
 private fun SyncedLyrics(
     lines: List<LyricLine>,
     translations: List<String?>?,
+    translationOnly: Boolean,
     now: NowPlaying,
     offsetMs: Long,
     karaoke: Boolean,
@@ -457,6 +471,9 @@ private fun SyncedLyrics(
         }
     }
     val currentOffset by rememberUpdatedState(offsetMs)
+    val only = translationOnly && translations != null
+    // Só muda o que aparece: salvar um trecho continua guardando o original e a tradução.
+    val shown = remember(lines, translations, only) { if (only) TranslatedLyrics.only(lines, translations.orEmpty()) else lines }
     val index by remember(lines) {
         derivedStateOf { LrcParser.indexAt(lines, posMs + currentOffset + ANTICIPATION_MS) }
     }
@@ -481,8 +498,9 @@ private fun SyncedLyrics(
             contentPadding = PaddingValues(top = maxHeight * 0.28f, bottom = maxHeight * 0.65f),
             modifier = Modifier.fillMaxSize(),
         ) {
-            itemsIndexed(lines, key = { i, l -> "$i-${l.timeMs}" }) { i, line ->
+            itemsIndexed(shown, key = { i, l -> "$i-${l.timeMs}" }) { i, line ->
                 val tr = translations?.getOrNull(i)
+                val original = lines[i]
                 val spans = if (karaoke && i == index && line.text.isNotBlank()) {
                     remember(line) { WordTiming.spans(line, lines.getOrNull(i + 1)?.timeMs) }
                 } else null
@@ -491,14 +509,14 @@ private fun SyncedLyrics(
                 } else null
                 LyricLineView(
                     text = line.text,
-                    translation = tr,
+                    translation = tr.takeUnless { only },
                     spans = spans,
                     backing = backingSpans,
                     lit = karaoke && i == index,
                     positionMs = { posMs + currentOffset + 120 },
                     distance = if (index < 0) i + 1 else i - index,
                     onClick = { onSeek(line.timeMs) },
-                    onLongClick = { if (line.text.isNotBlank()) onPick(PickedLine(line.text, tr, line.timeMs)) },
+                    onLongClick = { if (original.text.isNotBlank()) onPick(PickedLine(original.text, tr, original.timeMs)) },
                 )
             }
         }
@@ -604,7 +622,7 @@ private fun LyricLineView(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PlainLyrics(text: String, translations: List<String?>?, onPick: (PickedLine) -> Unit) {
+private fun PlainLyrics(text: String, translations: List<String?>?, translationOnly: Boolean, onPick: (PickedLine) -> Unit) {
     val lines = remember(text) { text.lines() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 20.dp)) {
         Text("Letra sem marcação de tempo para esta música.", color = Palette.ink.copy(alpha = 0.55f), fontSize = 13.sp)
@@ -617,8 +635,9 @@ private fun PlainLyrics(text: String, translations: List<String?>?, onPick: (Pic
                     .padding(vertical = 3.dp)
             ) {
                 val st = LocalLyricsStyle.current
-                Text(line, color = Palette.ink.copy(alpha = 0.9f), fontSize = (22 * st.k).sp, lineHeight = (30 * st.k).sp, fontWeight = FontWeight.SemiBold, fontFamily = st.family)
-                translations?.getOrNull(i)?.let { Text(it, color = Palette.ink.copy(alpha = 0.6f), fontSize = 16.sp, lineHeight = 21.sp) }
+                val tr = translations?.getOrNull(i)
+                Text(if (translationOnly && tr != null) tr else line, color = Palette.ink.copy(alpha = 0.9f), fontSize = (22 * st.k).sp, lineHeight = (30 * st.k).sp, fontWeight = FontWeight.SemiBold, fontFamily = st.family)
+                if (!translationOnly) tr?.let { Text(it, color = Palette.ink.copy(alpha = 0.6f), fontSize = 16.sp, lineHeight = 21.sp) }
             }
         }
         Spacer(Modifier.height(80.dp))
