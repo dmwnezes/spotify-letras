@@ -15,9 +15,6 @@ import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Locale
 
-/** [notice] avisa quando a tradução com IA falhou e foi usada a básica. */
-data class TranslationResult(val lines: List<String?>, val notice: String? = null)
-
 /**
  * Detecta o idioma e traduz a letra para português: com o Gemini, se houver chave, ou no próprio celular (ML Kit).
  * O pacote de cada idioma do ML Kit (~30 MB) é baixado uma única vez, na primeira tradução.
@@ -51,20 +48,17 @@ class LyricsTranslator(private val prefs: Prefs, http: OkHttpClient, filesDir: F
         return manager.isModelDownloaded(model).await() && manager.isModelDownloaded(pt).await()
     }
 
-    /** Usa a tradução salva, senão a IA, e o ML Kit como reserva. */
-    suspend fun translate(track: Track, code: String, lines: List<String>): TranslationResult {
-        store.get(track.id, lines)?.let { return TranslationResult(it) }
-        var notice: String? = null
+    /** Usa a tradução salva, senão a IA, e o ML Kit como reserva. [onFallback] avisa o motivo antes de usar a reserva. */
+    suspend fun translate(track: Track, code: String, lines: List<String>, onFallback: suspend (String) -> Unit): List<String?> {
+        store.get(track.id, lines)?.let { return it }
         if (hasAiKey) {
             try {
-                val out = gemini.translate(prefs.geminiKey, track, code, lines)
-                store.put(track.id, lines, out)
-                return TranslationResult(out)
+                return gemini.translate(prefs.geminiKey, track, code, lines).also { store.put(track.id, lines, it) }
             } catch (e: GeminiFailure) {
-                notice = "${e.message} Usei a tradução básica."
+                onFallback("${e.message} Usando a tradução básica.")
             }
         }
-        return TranslationResult(translateOnDevice(track.id, code, lines), notice)
+        return translateOnDevice(track.id, code, lines)
     }
 
     /** Traduz cada linha; linhas vazias ficam null. Resultado guardado por música. */

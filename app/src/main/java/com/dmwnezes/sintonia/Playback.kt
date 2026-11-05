@@ -229,12 +229,17 @@ class Playback(
         translateJob = scope.launch {
             val needsDownload = !translator.hasAiKey && runCatching { !translator.isModelReady(code) }.getOrDefault(false)
             _state.update { it.copy(translation = TranslationState.Loading(name, needsDownload)) }
-            val result = runCatching { translator.translate(track, code, lines) }
+            val result = runCatching {
+                translator.translate(track, code, lines) { reason ->
+                    _messages.tryEmit(reason)
+                    val downloading = runCatching { !translator.isModelReady(code) }.getOrDefault(false)
+                    _state.update { it.copy(translation = TranslationState.Loading(name, downloading)) }
+                }
+            }
             if (track.id != currentTrackId) return@launch
-            result.getOrNull()?.notice?.let { _messages.tryEmit(it) }
             _state.update {
                 it.copy(translation = result.fold(
-                    { t -> TranslationState.Ready(name, t.lines) },
+                    { t -> TranslationState.Ready(name, t) },
                     { TranslationState.Failed(name, "Não consegui traduzir agora. Confira a internet (o tradutor é baixado uma vez).") },
                 ))
             }
