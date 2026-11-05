@@ -154,7 +154,8 @@ private fun RecordContent(state: UiState, dim: Boolean) {
     val lines = ((state.lyrics as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines
     val translations = (state.translation as? TranslationState.Ready)?.lines?.takeIf { state.showTranslation }
     // Letra e tradução: a letra sobe e diminui para as duas caberem acima do @dmwnezes.
-    val both = translations != null && !state.translationOnly
+    // Não depende da tradução já ter chegado, senão a letra mudaria de lugar quando ela chegasse.
+    val both = state.translation != TranslationState.None && state.showTranslation && !state.translationOnly
     val nowState by rememberUpdatedState(now)
     val offset by rememberUpdatedState(state.lyricsOffsetMs)
 
@@ -170,8 +171,8 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                 translations = translations,
                 translationOnly = state.translationOnly,
                 positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                centerFraction = (frameTop + frameH * (if (both) 0.55f else 0.605f)) / maxHeight,
-                maxWidthFraction = (frameW * (if (both) 0.54f else 0.74f)) / maxWidth,
+                centerFraction = (frameTop + frameH * (if (both) 0.53f else 0.595f)) / maxHeight,
+                maxWidthFraction = (frameW * (if (both) 0.58f else 0.74f)) / maxWidth,
                 translationWidthFraction = (frameW * 0.74f) / maxWidth,
                 modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
             )
@@ -186,12 +187,12 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                     contentDescription = "Capa",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(frameW * 0.36f)
+                        .size(frameW * 0.27f)
                         .shadow(30.dp, RoundedCornerShape(16.dp), ambientColor = Cream.copy(alpha = 0.35f), spotColor = Cream.copy(alpha = 0.35f))
                         .clip(RoundedCornerShape(16.dp))
                         .background(Cream.copy(alpha = 0.06f)),
                 )
-                Spacer(Modifier.height(frameH * 0.018f))
+                Spacer(Modifier.height(frameH * 0.022f))
                 val title = track?.name ?: "Toque uma música no Spotify"
                 // Nome inteiro: diminui a fonte em nomes longos e usa até 2 linhas.
                 val titleSize = when {
@@ -210,7 +211,7 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                     Text(
                         it.artistLine, color = Cream.copy(alpha = 0.8f), fontFamily = Montserrat, fontWeight = FontWeight.Medium,
                         fontSize = 14.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 if (track != null && lines == null && state.lyrics !is LyricsState.Loading) {
@@ -225,7 +226,7 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                 "@dmwnezes",
                 color = Cream.copy(alpha = 0.75f), fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                 letterSpacing = 0.5.sp,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = frameH * (SAFE_BOTTOM - 0.045f)),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = frameH * (SAFE_BOTTOM - 0.032f)),
             )
             // Na preparação, mostra o quadro dos Stories e as faixas que o Instagram cobre.
             if (dim) SafeAreaGuide()
