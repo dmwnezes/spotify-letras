@@ -165,7 +165,7 @@ fun HistoryScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             title = { Text("Apagar o histórico?") },
-            text = { Text("As estatísticas saem do celular. O arquivo original do Spotify continua onde está.") },
+            text = { Text("As estatísticas saem do celular. O arquivo original do Spotify continua onde está. O app continua guardando o que você ouvir daqui para frente.") },
             confirmButton = { TextButton(onClick = { confirmClear = false; onClear() }) { Text("Apagar") } },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancelar") } },
         )
@@ -279,7 +279,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.historyContent(
 
     item {
         Text(
-            "${fmtInt(stats.totalEntries)} reproduções lidas de ${stats.files} arquivo(s).",
+            "${fmtInt(stats.totalEntries)} reproduções registradas.",
             color = Palette.ink.copy(alpha = 0.4f), fontSize = 12.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 28.dp),
         )

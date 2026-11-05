@@ -77,6 +77,8 @@ data class HistoryStats(
     val periods: Map<String, PeriodStats>,
     /** Quando cada um dos principais artistas apareceu pela primeira vez. */
     val artistTimeline: List<Ranked>,
+    /** Todos os artistas já ouvidos, para o que o app coletar depois não contar como descoberta. */
+    val knownArtists: List<String> = emptyList(),
 ) {
     val all: PeriodStats? get() = periods["all"]
     val years: List<String> get() = periods.keys.filter { it != "all" }.sortedDescending()

@@ -57,6 +57,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.dmwnezes.sintonia.history.CollectWorker
 import com.dmwnezes.sintonia.history.HistoryViewModel
 import com.dmwnezes.sintonia.live.LiveLyricsService
 import com.dmwnezes.sintonia.ui.AppBackground
@@ -92,11 +93,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         intent?.data?.let(vm::handleCallback)
         pendingOpen.value = intent?.getStringExtra("abrir")
+        CollectWorker.schedule(this)
 
         // Só consulta o Spotify enquanto o app está aberto na tela (ou o serviço da tela de bloqueio está ligado).
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.startPolling()
+                historyVm.refresh()
                 val prefs = AppGraph.prefs
                 if (prefs.liveLyrics && prefs.isLoggedIn && !LiveLyricsService.running) {
                     runCatching { LiveLyricsService.start(this@MainActivity) }
@@ -175,6 +178,7 @@ class MainActivity : ComponentActivity() {
         var wrappedKey by remember { mutableStateOf<String?>(null) }
         var showUpdate by remember { mutableStateOf(false) }
         var showSearch by remember { mutableStateOf(false) }
+        LaunchedEffect(tab) { if (tab == 2) historyVm.refresh() }
         val open by pendingOpen.collectAsStateWithLifecycle()
         LaunchedEffect(open) {
             when (open) {

@@ -3,10 +3,12 @@ package com.dmwnezes.sintonia
 import android.app.Application
 import com.dmwnezes.sintonia.data.Prefs
 import com.dmwnezes.sintonia.data.SpotifyClient
+import com.dmwnezes.sintonia.history.PlayLog
 import com.dmwnezes.sintonia.lyrics.LrcLibClient
 import com.dmwnezes.sintonia.notebook.NotebookStore
 import com.dmwnezes.sintonia.translate.LyricsTranslator
 import okhttp3.OkHttpClient
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,6 +35,7 @@ object AppGraph {
     val translator by lazy { LyricsTranslator(prefs, http, app.filesDir) }
     val playback by lazy { Playback(app, prefs, spotify, lrclib, translator) }
     val notebook by lazy { NotebookStore(app) }
+    val playLog by lazy { PlayLog(File(app.filesDir, "coletadas.jsonl")) }
 }
 
 class SintoniaApp : Application() {

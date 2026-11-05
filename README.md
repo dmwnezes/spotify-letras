@@ -58,6 +58,8 @@ Se o login der erro 403, abra **User Management** no painel do app e adicione o 
 
 Tudo é calculado no celular. O backup exportado pode ser aberto de novo pelo mesmo botão.
 
+O app também coleta sozinho o que você ouve, a cada hora e sempre que é aberto, e soma ao histórico importado. Assim, as estatísticas e a retrospectiva continuam atualizadas sem novo arquivo. O Spotify não informa quanto de cada faixa foi ouvido, então essa parte usa a duração da música. Se você ouvir mais de 50 músicas entre duas coletas, as mais antigas ficam de fora.
+
 ## Estrutura
 
 ```

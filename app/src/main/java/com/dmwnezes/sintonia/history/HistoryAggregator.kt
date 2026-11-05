@@ -8,7 +8,10 @@ import java.time.ZoneId
  * Recebe as reproduções uma a uma e calcula as estatísticas,
  * para o geral ("all") e para cada ano. Não guarda a lista inteira na memória.
  */
-class HistoryAggregator(private val zone: ZoneId = ZoneId.systemDefault()) {
+class HistoryAggregator(
+    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val knownArtists: Set<String> = emptySet(),
+) {
 
     private val periods = mutableMapOf<String, Acc>()
     private val artistFirst = mutableMapOf<String, Long>()
@@ -38,7 +41,7 @@ class HistoryAggregator(private val zone: ZoneId = ZoneId.systemDefault()) {
             ?.mapNotNull { (artist, ms) -> firstByArtist[artist]?.let { Ranked(artist, fmtDate(it), ms) } }
             ?.sortedBy { it.sub.toIsoKey() }
             .orEmpty()
-        return HistoryStats(importedAtMs, total, files, result, timeline)
+        return HistoryStats(importedAtMs, total, files, result, timeline, (knownArtists + artistFirst.keys).toList())
     }
 
     private class Counter { var ms = 0L; var count = 0 }
@@ -127,8 +130,8 @@ class HistoryAggregator(private val zone: ZoneId = ZoneId.systemDefault()) {
                 Ranked(name, "$artist · ${fmtDate(LocalDate.parse(d))}", count = n)
             }
 
-            val newOnes = if (key == "all") firstByArtist.keys.filter { it in artistMs }
-            else firstByArtist.filter { it.value.year.toString() == key && it.key in artistMs }.keys
+            val newOnes = if (key == "all") firstByArtist.keys.filter { it in artistMs && it !in knownArtists }
+            else firstByArtist.filter { it.value.year.toString() == key && it.key in artistMs && it.key !in knownArtists }.keys
 
             return PeriodStats(
                 key = key, ms = ms, plays = plays, streams = streams,

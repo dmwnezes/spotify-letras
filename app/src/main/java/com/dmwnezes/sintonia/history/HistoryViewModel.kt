@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.dmwnezes.sintonia.AppGraph
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +31,22 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            val saved = withContext(Dispatchers.IO) { store.load() }
+            val saved = withContext(Dispatchers.IO) { current() }
             _ui.update { it.copy(loaded = true, stats = saved) }
+            refresh()
+        }
+    }
+
+    private fun current() = HistoryMerge.combine(store.load(), AppGraph.playLog.read())
+
+    /** Busca o que tocou desde a última coleta e atualiza estatísticas e retrospectiva. */
+    fun refresh() {
+        if (!AppGraph.prefs.isLoggedIn) return
+        viewModelScope.launch {
+            val recent = runCatching { AppGraph.spotify.recentlyPlayed() }.getOrDefault(emptyList())
+            // Relê mesmo sem novidade aqui: a coleta de fundo pode ter gravado sem o app saber.
+            val fresh = withContext(Dispatchers.IO) { AppGraph.playLog.add(recent); current() }
+            _ui.update { if (it.importing) it else it.copy(stats = fresh) }
         }
     }
 
@@ -42,14 +57,15 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         _ui.update { it.copy(importing = true, importedCount = 0, message = null) }
         viewModelScope.launch {
             try {
-                val stats = withContext(Dispatchers.IO) {
+                val imported = withContext(Dispatchers.IO) {
                     importer.import(uris) { n -> _ui.update { it.copy(importedCount = n) } }
                         .also(store::save)
                 }
+                val stats = withContext(Dispatchers.IO) { current() } ?: imported
                 _ui.update {
                     it.copy(
                         importing = false, stats = stats, selected = "all",
-                        message = "Histórico importado: ${fmtInt(stats.totalEntries)} reproduções lidas.",
+                        message = "Histórico importado: ${fmtInt(imported.totalEntries)} reproduções lidas.",
                     )
                 }
             } catch (e: HistoryImportException) {
@@ -79,6 +95,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clear() {
         store.clear()
+        AppGraph.playLog.clear()
         _ui.update { HistoryUi(loaded = true, message = "Histórico apagado do celular.") }
     }
 

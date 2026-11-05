@@ -30,6 +30,7 @@ class HistoryStore(context: Context) {
             put("totalEntries", s.totalEntries)
             put("files", s.files)
             put("artistTimeline", s.artistTimeline.toJson())
+            put("knownArtists", JSONArray(s.knownArtists))
             put("periods", JSONObject().apply { s.periods.forEach { (k, p) -> put(k, p.toJson()) } })
         }.toString()
 
@@ -43,6 +44,7 @@ class HistoryStore(context: Context) {
                 files = o.optInt("files"),
                 periods = periods.keys().asSequence().associateWith { periodFrom(periods.getJSONObject(it)) },
                 artistTimeline = o.optJSONArray("artistTimeline").rankedList(),
+                knownArtists = o.optJSONArray("knownArtists")?.let { a -> (0 until a.length()).map(a::getString) }.orEmpty(),
             )
         }
 
