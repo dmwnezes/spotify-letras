@@ -171,7 +171,7 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                 translations = translations,
                 translationOnly = state.translationOnly,
                 positionMs = { (nowState?.positionAt(SystemClock.elapsedRealtime()) ?: 0L) + offset + 120 },
-                centerFraction = (frameTop + frameH * (if (both) 0.546f else 0.605f)) / maxHeight,
+                centerFraction = (frameTop + frameH * (if (both) 0.53f else 0.595f)) / maxHeight,
                 maxWidthFraction = (frameW * (if (both) 0.58f else 0.74f)) / maxWidth,
                 translationWidthFraction = (frameW * 0.74f) / maxWidth,
                 modifier = Modifier.graphicsLayer { alpha = if (dim) 0.35f else 1f },
@@ -187,7 +187,7 @@ private fun RecordContent(state: UiState, dim: Boolean) {
                     contentDescription = "Capa",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(frameW * 0.30f)
+                        .size(frameW * 0.27f)
                         .shadow(30.dp, RoundedCornerShape(16.dp), ambientColor = Cream.copy(alpha = 0.35f), spotColor = Cream.copy(alpha = 0.35f))
                         .clip(RoundedCornerShape(16.dp))
                         .background(Cream.copy(alpha = 0.06f)),
